@@ -1,13 +1,21 @@
 /**
  * Zustand store for schema design state.
  * Holds the current Schema JSON as the single source of truth.
- * Loads a rich hard-coded sample schema so the UI and diagram canvas
- * can be interacted with before AI generation is called.
+ * Supports full interactive editing, client-side validation, auto-layout,
+ * undo/redo history, and selection state.
  */
 
 import { create } from 'zustand';
-import type { Schema, Dialect } from '../types';
+import type {
+  Schema,
+  Table,
+  Column,
+  Relationship,
+  Dialect,
+} from '../types';
 import { api, ApiClientError } from '../../../lib/api';
+import { validateSchemaClient } from '../../../lib/schemaValidator';
+import { computeAutoLayout } from '../../../lib/schemaToFlow';
 
 /**
  * Hard-coded sample schema (E-commerce with users, products, orders, order_items).
@@ -206,61 +214,484 @@ export const SAMPLE_SCHEMA: Schema = {
   ],
 };
 
-interface SchemaStoreState {
+const MAX_HISTORY = 30;
+
+export interface SchemaStoreState {
   schema: Schema;
   dialect: Dialect;
   isGenerating: boolean;
   error: string | null;
   generatedAt: Date | null;
+  validationErrors: string[];
 
-  // Actions
-  setSchema: (schema: Schema) => void;
+  // Diagram layout positions & selections
+  nodePositions: Record<string, { x: number; y: number }>;
+  selectedTableId: string | null;
+  selectedColumnId: string | null;
+  selectedRelationshipId: string | null;
+
+  // History for undo/redo (T6.8)
+  past: Schema[];
+  future: Schema[];
+
+  // Base Schema Actions
+  setSchema: (schema: Schema, recordHistory?: boolean) => void;
   setDialect: (dialect: Dialect) => void;
   setError: (error: string | null) => void;
   loadSample: () => void;
   clearSchema: () => void;
   generateFromDescription: (description: string) => Promise<boolean>;
+
+  // Selection Actions
+  setSelectedTable: (tableId: string | null) => void;
+  setSelectedColumn: (tableId: string | null, columnId: string | null) => void;
+  setSelectedRelationship: (relId: string | null) => void;
+  clearSelection: () => void;
+
+  // Node Positions
+  updateNodePosition: (tableId: string, position: { x: number; y: number }) => void;
+  recalculateAutoLayout: () => void;
+
+  // Table CRUD Actions (T6.4, T6.5)
+  addTable: (name?: string) => string;
+  updateTableName: (tableId: string, name: string) => void;
+  deleteTable: (tableId: string) => void;
+
+  // Column CRUD Actions (T6.4, T6.5)
+  addColumn: (tableId: string, column?: Partial<Column>) => string;
+  updateColumn: (tableId: string, columnId: string, updates: Partial<Column>) => void;
+  deleteColumn: (tableId: string, columnId: string) => void;
+
+  // Relationship CRUD Actions (T6.6)
+  addRelationship: (
+    rel: Omit<Relationship, 'id'> & { id?: string },
+  ) => string | null;
+  updateRelationship: (relId: string, updates: Partial<Relationship>) => void;
+  deleteRelationship: (relId: string) => void;
+
+  // Undo / Redo Actions (T6.8)
+  undo: () => void;
+  redo: () => void;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
 }
 
-export const useSchemaStore = create<SchemaStoreState>((set, get) => ({
-  schema: SAMPLE_SCHEMA,
-  dialect: 'postgresql',
-  isGenerating: false,
-  error: null,
-  generatedAt: new Date(),
+export const useSchemaStore = create<SchemaStoreState>((set, get) => {
+  const initialSchema = SAMPLE_SCHEMA;
+  const initialPositions = computeAutoLayout(initialSchema);
+  const initialValidation = validateSchemaClient(initialSchema);
 
-  setSchema: (schema) => set({ schema, error: null }),
-  setDialect: (dialect) => set({ dialect }),
-  setError: (error) => set({ error }),
-  loadSample: () => set({ schema: SAMPLE_SCHEMA, error: null }),
-  clearSchema: () =>
+  // Helper to push history
+  const commitSchema = (newSchema: Schema) => {
+    const { schema, past } = get();
+    const newPast = [...past, schema].slice(-MAX_HISTORY);
+    const validationErrors = validateSchemaClient(newSchema);
+
     set({
-      schema: { tables: [], relationships: [] },
+      schema: newSchema,
+      past: newPast,
+      future: [],
+      validationErrors,
       error: null,
-    }),
+    });
+  };
 
-  generateFromDescription: async (description: string) => {
-    const { dialect } = get();
-    set({ isGenerating: true, error: null });
+  return {
+    schema: initialSchema,
+    dialect: 'postgresql',
+    isGenerating: false,
+    error: null,
+    generatedAt: new Date(),
+    validationErrors: initialValidation,
 
-    try {
-      const generatedSchema = await api.generateSchema(description, dialect);
-      set({
-        schema: generatedSchema,
-        isGenerating: false,
-        error: null,
-        generatedAt: new Date(),
-      });
-      return true;
-    } catch (err: unknown) {
-      let message = 'Failed to generate schema';
-      if (err instanceof ApiClientError) {
-        message = err.message;
-      } else if (err instanceof Error) {
-        message = err.message;
+    nodePositions: initialPositions,
+    selectedTableId: null,
+    selectedColumnId: null,
+    selectedRelationshipId: null,
+
+    past: [],
+    future: [],
+
+    setSchema: (newSchema: Schema, recordHistory = true) => {
+      const validationErrors = validateSchemaClient(newSchema);
+      if (recordHistory) {
+        commitSchema(newSchema);
+      } else {
+        set({ schema: newSchema, validationErrors, error: null });
       }
-      set({ error: message, isGenerating: false });
-      return false;
-    }
-  },
-}));
+    },
+
+    setDialect: (dialect: Dialect) => set({ dialect }),
+    setError: (error: string | null) => set({ error }),
+
+    loadSample: () => {
+      const newPositions = computeAutoLayout(SAMPLE_SCHEMA);
+      commitSchema(SAMPLE_SCHEMA);
+      set({
+        nodePositions: newPositions,
+        selectedTableId: null,
+        selectedColumnId: null,
+        selectedRelationshipId: null,
+      });
+    },
+
+    clearSchema: () => {
+      const emptySchema: Schema = { tables: [], relationships: [] };
+      commitSchema(emptySchema);
+      set({
+        nodePositions: {},
+        selectedTableId: null,
+        selectedColumnId: null,
+        selectedRelationshipId: null,
+      });
+    },
+
+    generateFromDescription: async (description: string) => {
+      const { dialect } = get();
+      set({ isGenerating: true, error: null });
+
+      try {
+        const generatedSchema = await api.generateSchema(description, dialect);
+        const newPositions = computeAutoLayout(generatedSchema);
+        commitSchema(generatedSchema);
+        set({
+          isGenerating: false,
+          error: null,
+          generatedAt: new Date(),
+          nodePositions: newPositions,
+          selectedTableId: null,
+          selectedColumnId: null,
+          selectedRelationshipId: null,
+        });
+        return true;
+      } catch (err: unknown) {
+        let message = 'Failed to generate schema';
+        if (err instanceof ApiClientError) {
+          message = err.message;
+        } else if (err instanceof Error) {
+          message = err.message;
+        }
+        set({ error: message, isGenerating: false });
+        return false;
+      }
+    },
+
+    setSelectedTable: (tableId) =>
+      set({
+        selectedTableId: tableId,
+        selectedColumnId: null,
+        selectedRelationshipId: null,
+      }),
+
+    setSelectedColumn: (tableId, columnId) =>
+      set({
+        selectedTableId: tableId,
+        selectedColumnId: columnId,
+        selectedRelationshipId: null,
+      }),
+
+    setSelectedRelationship: (relId) =>
+      set({
+        selectedRelationshipId: relId,
+        selectedTableId: null,
+        selectedColumnId: null,
+      }),
+
+    clearSelection: () =>
+      set({
+        selectedTableId: null,
+        selectedColumnId: null,
+        selectedRelationshipId: null,
+      }),
+
+    updateNodePosition: (tableId, position) => {
+      set((state) => ({
+        nodePositions: {
+          ...state.nodePositions,
+          [tableId]: position,
+        },
+      }));
+    },
+
+    recalculateAutoLayout: () => {
+      const { schema } = get();
+      const newPositions = computeAutoLayout(schema);
+      set({ nodePositions: newPositions });
+    },
+
+    // Table Actions
+    addTable: (customName) => {
+      const { schema } = get();
+      let index = schema.tables.length + 1;
+      let name = customName || `table_${index}`;
+
+      // Ensure unique name
+      while (schema.tables.some((t) => t.name === name)) {
+        index++;
+        name = `table_${index}`;
+      }
+
+      const tableId = `t_${name}`;
+      const primaryKeyColId = `c_${name}_id`;
+
+      const newTable: Table = {
+        id: tableId,
+        name,
+        columns: [
+          {
+            id: primaryKeyColId,
+            name: 'id',
+            type: 'INTEGER',
+            primaryKey: true,
+            nullable: false,
+            unique: true,
+            autoIncrement: true,
+          },
+        ],
+      };
+
+      const newSchema: Schema = {
+        ...schema,
+        tables: [...schema.tables, newTable],
+      };
+
+      // Place new table at reasonable coordinates
+      const positions = { ...get().nodePositions };
+      positions[tableId] = {
+        x: 100 + (schema.tables.length % 3) * 360,
+        y: 100 + Math.floor(schema.tables.length / 3) * 280,
+      };
+
+      commitSchema(newSchema);
+      set({
+        nodePositions: positions,
+        selectedTableId: tableId,
+        selectedColumnId: primaryKeyColId,
+      });
+
+      return tableId;
+    },
+
+    updateTableName: (tableId, newName) => {
+      const { schema } = get();
+      const table = schema.tables.find((t) => t.id === tableId);
+      if (!table || table.name === newName) return;
+
+      const newSchema: Schema = {
+        ...schema,
+        tables: schema.tables.map((t) =>
+          t.id === tableId ? { ...t, name: newName } : t,
+        ),
+      };
+
+      commitSchema(newSchema);
+    },
+
+    deleteTable: (tableId) => {
+      const { schema, selectedTableId } = get();
+      const newSchema: Schema = {
+        tables: schema.tables.filter((t) => t.id !== tableId),
+        relationships: schema.relationships.filter(
+          (r) => r.fromTable !== tableId && r.toTable !== tableId,
+        ),
+      };
+
+      commitSchema(newSchema);
+
+      if (selectedTableId === tableId) {
+        set({ selectedTableId: null, selectedColumnId: null });
+      }
+    },
+
+    // Column Actions
+    addColumn: (tableId, columnData) => {
+      const { schema } = get();
+      const table = schema.tables.find((t) => t.id === tableId);
+      if (!table) return '';
+
+      let colIdx = table.columns.length + 1;
+      let name = columnData?.name || `column_${colIdx}`;
+      while (table.columns.some((c) => c.name === name)) {
+        colIdx++;
+        name = `column_${colIdx}`;
+      }
+
+      const columnId = `c_${table.name}_${name}_${Date.now().toString().slice(-4)}`;
+
+      const newCol: Column = {
+        id: columnId,
+        name,
+        type: columnData?.type || 'VARCHAR',
+        length: columnData?.type === 'VARCHAR' || !columnData?.type ? 255 : undefined,
+        primaryKey: columnData?.primaryKey ?? false,
+        nullable: columnData?.nullable ?? true,
+        unique: columnData?.unique ?? false,
+        autoIncrement: columnData?.autoIncrement ?? false,
+        ...columnData,
+      };
+
+      const newSchema: Schema = {
+        ...schema,
+        tables: schema.tables.map((t) =>
+          t.id === tableId ? { ...t, columns: [...t.columns, newCol] } : t,
+        ),
+      };
+
+      commitSchema(newSchema);
+      set({ selectedTableId: tableId, selectedColumnId: columnId });
+      return columnId;
+    },
+
+    updateColumn: (tableId, columnId, updates) => {
+      const { schema } = get();
+      const table = schema.tables.find((t) => t.id === tableId);
+      if (!table) return;
+
+      const newSchema: Schema = {
+        ...schema,
+        tables: schema.tables.map((t) => {
+          if (t.id !== tableId) return t;
+          return {
+            ...t,
+            columns: t.columns.map((c) => {
+              if (c.id !== columnId) return c;
+              const merged = { ...c, ...updates };
+
+              // Clean type-specific fields if type changed
+              if (updates.type && updates.type !== 'VARCHAR') {
+                delete merged.length;
+              }
+              if (updates.type && updates.type !== 'DECIMAL') {
+                delete merged.precision;
+                delete merged.scale;
+              }
+              if (updates.type && updates.type !== 'INTEGER' && updates.type !== 'BIGINT') {
+                delete merged.autoIncrement;
+              }
+
+              return merged;
+            }),
+          };
+        }),
+      };
+
+      commitSchema(newSchema);
+    },
+
+    deleteColumn: (tableId, columnId) => {
+      const { schema, selectedColumnId } = get();
+      const newSchema: Schema = {
+        tables: schema.tables.map((t) =>
+          t.id === tableId
+            ? { ...t, columns: t.columns.filter((c) => c.id !== columnId) }
+            : t,
+        ),
+        relationships: schema.relationships.filter(
+          (r) => r.fromColumn !== columnId && r.toColumn !== columnId,
+        ),
+      };
+
+      commitSchema(newSchema);
+      if (selectedColumnId === columnId) {
+        set({ selectedColumnId: null });
+      }
+    },
+
+    // Relationship Actions
+    addRelationship: (relData) => {
+      const { schema } = get();
+
+      // Don't duplicate exact relationships
+      const exists = schema.relationships.some(
+        (r) =>
+          r.fromTable === relData.fromTable &&
+          r.fromColumn === relData.fromColumn &&
+          r.toTable === relData.toTable &&
+          r.toColumn === relData.toColumn,
+      );
+      if (exists) return null;
+
+      const id = relData.id || `r_${Date.now().toString().slice(-6)}`;
+      const newRel: Relationship = {
+        id,
+        fromTable: relData.fromTable,
+        fromColumn: relData.fromColumn,
+        toTable: relData.toTable,
+        toColumn: relData.toColumn,
+        onDelete: relData.onDelete || 'CASCADE',
+      };
+
+      const newSchema: Schema = {
+        ...schema,
+        relationships: [...schema.relationships, newRel],
+      };
+
+      commitSchema(newSchema);
+      set({ selectedRelationshipId: id });
+      return id;
+    },
+
+    updateRelationship: (relId, updates) => {
+      const { schema } = get();
+      const newSchema: Schema = {
+        ...schema,
+        relationships: schema.relationships.map((r) =>
+          r.id === relId ? { ...r, ...updates } : r,
+        ),
+      };
+
+      commitSchema(newSchema);
+    },
+
+    deleteRelationship: (relId) => {
+      const { schema, selectedRelationshipId } = get();
+      const newSchema: Schema = {
+        ...schema,
+        relationships: schema.relationships.filter((r) => r.id !== relId),
+      };
+
+      commitSchema(newSchema);
+      if (selectedRelationshipId === relId) {
+        set({ selectedRelationshipId: null });
+      }
+    },
+
+    // Undo / Redo (T6.8)
+    undo: () => {
+      const { past, schema, future } = get();
+      if (past.length === 0) return;
+
+      const previous = past[past.length - 1];
+      const newPast = past.slice(0, past.length - 1);
+      const validationErrors = validateSchemaClient(previous);
+
+      set({
+        schema: previous,
+        past: newPast,
+        future: [schema, ...future],
+        validationErrors,
+        error: null,
+      });
+    },
+
+    redo: () => {
+      const { past, schema, future } = get();
+      if (future.length === 0) return;
+
+      const next = future[0];
+      const newFuture = future.slice(1);
+      const validationErrors = validateSchemaClient(next);
+
+      set({
+        schema: next,
+        past: [...past, schema],
+        future: newFuture,
+        validationErrors,
+        error: null,
+      });
+    },
+
+    canUndo: () => get().past.length > 0,
+    canRedo: () => get().future.length > 0,
+  };
+});
