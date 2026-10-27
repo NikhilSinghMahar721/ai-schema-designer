@@ -8,6 +8,7 @@
 
 import React, { useState } from 'react';
 import { useSchemaStore } from '../store/schema.store';
+import { RefineBox } from './RefineBox';
 
 const SAMPLE_PROMPTS = [
   {
@@ -28,6 +29,7 @@ const SAMPLE_PROMPTS = [
 ];
 
 export function DescribePanel() {
+  const [activeTab, setActiveTab] = useState<'generate' | 'refine'>('generate');
   const [description, setDescription] = useState('');
   const {
     dialect,
@@ -44,7 +46,10 @@ export function DescribePanel() {
     if (!description.trim() || isGenerating) return;
 
     setError(null);
-    await generateFromDescription(description.trim());
+    const success = await generateFromDescription(description.trim());
+    if (success) {
+      // Suggest switching to refine for follow-up prompts
+    }
   };
 
   const handleSelectPrompt = (promptText: string) => {
@@ -66,16 +71,46 @@ export function DescribePanel() {
           </h2>
         </div>
         <h1 className="text-xl font-bold text-white tracking-tight">
-          Describe Your Database
+          {activeTab === 'generate' ? 'Describe Your Database' : 'Refine Your Schema'}
         </h1>
         <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-          Type your requirements in plain English. The AI generates a validated
-          relational schema with primary keys and relationships.
+          {activeTab === 'generate'
+            ? 'Type your requirements in plain English. The AI generates a validated relational schema with primary keys and relationships.'
+            : 'Provide instructions to extend, modify, or enhance the active relational model.'}
         </p>
       </div>
 
-      {/* Form */}
-      <form onSubmit={handleGenerate} className="flex flex-col gap-4">
+      {/* Tabs */}
+      <div className="flex bg-slate-950 p-1 rounded-lg border border-slate-800 mb-4 text-xs">
+        <button
+          type="button"
+          onClick={() => setActiveTab('generate')}
+          className={`flex-1 py-1.5 rounded-md font-medium transition-all ${
+            activeTab === 'generate'
+              ? 'bg-indigo-600 text-white font-semibold shadow-sm'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          ✨ Generate New
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('refine')}
+          className={`flex-1 py-1.5 rounded-md font-medium transition-all ${
+            activeTab === 'refine'
+              ? 'bg-emerald-600 text-white font-semibold shadow-sm'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          ⚡ Refine Schema
+        </button>
+      </div>
+
+      {activeTab === 'refine' ? (
+        <RefineBox />
+      ) : (
+        /* Form */
+        <form onSubmit={handleGenerate} className="flex flex-col gap-4">
         {/* Dialect selector */}
         <div>
           <label className="text-xs font-medium text-slate-300 block mb-1.5">
@@ -241,6 +276,7 @@ export function DescribePanel() {
           </button>
         </div>
       </form>
+      )}
     </div>
   );
 }

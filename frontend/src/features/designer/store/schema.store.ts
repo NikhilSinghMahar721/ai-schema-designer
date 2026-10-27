@@ -16,6 +16,10 @@ import type {
 import { api, ApiClientError } from '../../../lib/api';
 import { validateSchemaClient } from '../../../lib/schemaValidator';
 import { computeAutoLayout } from '../../../lib/schemaToFlow';
+import {
+  computeSchemaDiff,
+  type SchemaDiffSummary,
+} from '../../../lib/schemaDiff';
 
 /**
  * Hard-coded sample schema (E-commerce with users, products, orders, order_items).
@@ -220,6 +224,7 @@ export interface SchemaStoreState {
   schema: Schema;
   dialect: Dialect;
   isGenerating: boolean;
+  isRefining: boolean;
   error: string | null;
   generatedAt: Date | null;
   validationErrors: string[];
@@ -241,6 +246,11 @@ export interface SchemaStoreState {
   loadSample: () => void;
   clearSchema: () => void;
   generateFromDescription: (description: string) => Promise<boolean>;
+  refineFromInstruction: (
+    instruction: string,
+  ) => Promise<{ success: boolean; diff?: SchemaDiffSummary; error?: string }>;
+  exportJson: () => void;
+  importJson: (jsonString: string) => { success: boolean; error?: string };
 
   // Selection Actions
   setSelectedTable: (tableId: string | null) => void;
@@ -300,6 +310,7 @@ export const useSchemaStore = create<SchemaStoreState>((set, get) => {
     schema: initialSchema,
     dialect: 'postgresql',
     isGenerating: false,
+    isRefining: false,
     error: null,
     generatedAt: new Date(),
     validationErrors: initialValidation,
@@ -373,6 +384,98 @@ export const useSchemaStore = create<SchemaStoreState>((set, get) => {
         }
         set({ error: message, isGenerating: false });
         return false;
+      }
+    },
+
+    refineFromInstruction: async (instruction: string) => {
+      const { schema } = get();
+      set({ isRefining: true, error: null });
+
+      try {
+        const refinedSchema = await api.refineSchema(schema, instruction);
+        const diff = computeSchemaDiff(schema, refinedSchema);
+
+        // Compute layout for any newly added tables while preserving existing coordinates
+        const currentPositions = { ...get().nodePositions };
+        const autoLayout = computeAutoLayout(refinedSchema);
+        for (const table of refinedSchema.tables) {
+          if (!currentPositions[table.id]) {
+            currentPositions[table.id] = autoLayout[table.id] ?? {
+              x: 100,
+              y: 100,
+            };
+          }
+        }
+
+        commitSchema(refinedSchema);
+        set({
+          isRefining: false,
+          error: null,
+          nodePositions: currentPositions,
+          generatedAt: new Date(),
+        });
+
+        return { success: true, diff };
+      } catch (err: unknown) {
+        let message = 'Failed to refine schema';
+        if (err instanceof ApiClientError) {
+          message = err.message;
+        } else if (err instanceof Error) {
+          message = err.message;
+        }
+        set({ error: message, isRefining: false });
+        return { success: false, error: message };
+      }
+    },
+
+    exportJson: () => {
+      const { schema } = get();
+      const jsonStr = JSON.stringify(schema, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `schema_${Date.now()}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    },
+
+    importJson: (jsonString: string) => {
+      try {
+        const parsed = JSON.parse(jsonString) as Schema;
+        if (!parsed || !Array.isArray(parsed.tables) || !Array.isArray(parsed.relationships)) {
+          return {
+            success: false,
+            error: 'Invalid schema JSON format: "tables" and "relationships" arrays required.',
+          };
+        }
+
+        const errors = validateSchemaClient(parsed);
+        if (errors.length > 0) {
+          return {
+            success: false,
+            error: `Schema validation failed: ${errors[0]}`,
+          };
+        }
+
+        const newPositions = computeAutoLayout(parsed);
+        commitSchema(parsed);
+        set({
+          nodePositions: newPositions,
+          selectedTableId: null,
+          selectedColumnId: null,
+          selectedRelationshipId: null,
+          error: null,
+        });
+
+        return { success: true };
+      } catch (err: unknown) {
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : 'Invalid JSON file',
+        };
       }
     },
 
