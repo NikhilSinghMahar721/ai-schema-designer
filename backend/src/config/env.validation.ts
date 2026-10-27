@@ -59,8 +59,10 @@ export type EnvConfig = z.infer<typeof EnvSchema>;
  * Validates process.env and returns a typed config object.
  * Throws with a descriptive error if validation fails.
  */
-export function validateEnv(): EnvConfig {
-  const result = EnvSchema.safeParse(process.env);
+export function validateEnv(config?: Record<string, unknown>): EnvConfig {
+  const toValidate =
+    config && Object.keys(config).length > 0 ? config : process.env;
+  const result = EnvSchema.safeParse(toValidate);
   if (!result.success) {
     const formatted = result.error.issues
       .map((issue) => `  ${issue.path.join('.')}: ${issue.message}`)

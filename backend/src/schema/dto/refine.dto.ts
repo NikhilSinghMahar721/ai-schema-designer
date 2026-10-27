@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { SchemaZ } from '../schema.types.js';
 
-export const RefineDtoZ = z.object({
+export const RefineDtoZ = z.strictObject({
   schema: SchemaZ,
   instruction: z
     .string()

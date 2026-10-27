@@ -76,3 +76,179 @@ Natural Language ──AI──▶ JSON Schema ◀──edits── ER Diagram (
 - **Safe Identifiers:** All table/column names are validated against strict regex and quoted defensively.
 - **HTTP-Only Sessions:** Tokens are never stored in `localStorage`; session cookies are HTTP-only and SameSite protected.
 - **Strict Authorization:** All schema access is strictly scoped to the authenticated user ID.
+
+---
+
+## 📡 API Reference & Core Endpoints
+
+All core schema endpoints work for guests without authentication. All request and response bodies use JSON.
+Errors always follow a consistent safe envelope with no stack traces:
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Description is required"
+  }
+}
+```
+
+### 1. Health Check
+```bash
+curl -X GET http://localhost:4000/api/health
+```
+**Response (200 OK):**
+```json
+{
+  "status": "ok"
+}
+```
+
+### 2. Generate Schema from Natural Language
+```bash
+curl -X POST http://localhost:4000/api/schema/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "description": "Design an e-commerce platform with products, categories, customers, and orders",
+    "dialect": "postgresql"
+  }'
+```
+**Response (200 OK):**
+```json
+{
+  "schema": {
+    "tables": [
+      {
+        "id": "t_categories",
+        "name": "categories",
+        "columns": [
+          {
+            "id": "c_categories_id",
+            "name": "id",
+            "type": "INTEGER",
+            "primaryKey": true,
+            "nullable": false,
+            "unique": true,
+            "autoIncrement": true
+          },
+          {
+            "id": "c_categories_name",
+            "name": "name",
+            "type": "VARCHAR",
+            "length": 100,
+            "primaryKey": false,
+            "nullable": false,
+            "unique": true
+          }
+        ]
+      }
+    ],
+    "relationships": []
+  }
+}
+```
+
+### 3. Refine Schema with Instructions
+```bash
+curl -X POST http://localhost:4000/api/schema/refine \
+  -H "Content-Type: application/json" \
+  -d '{
+    "schema": {
+      "tables": [
+        {
+          "id": "t_users",
+          "name": "users",
+          "columns": [
+            {
+              "id": "c_users_id",
+              "name": "id",
+              "type": "INTEGER",
+              "primaryKey": true,
+              "nullable": false,
+              "unique": true,
+              "autoIncrement": true
+            }
+          ]
+        }
+      ],
+      "relationships": []
+    },
+    "instruction": "Add email (unique varchar) and created_at (timestamp) to users"
+  }'
+```
+**Response (200 OK):**
+```json
+{
+  "schema": {
+    "tables": [
+      {
+        "id": "t_users",
+        "name": "users",
+        "columns": [
+          {
+            "id": "c_users_id",
+            "name": "id",
+            "type": "INTEGER",
+            "primaryKey": true,
+            "nullable": false,
+            "unique": true,
+            "autoIncrement": true
+          },
+          {
+            "id": "c_users_email",
+            "name": "email",
+            "type": "VARCHAR",
+            "length": 254,
+            "primaryKey": false,
+            "nullable": false,
+            "unique": true
+          },
+          {
+            "id": "c_users_created_at",
+            "name": "created_at",
+            "type": "TIMESTAMP",
+            "primaryKey": false,
+            "nullable": false,
+            "unique": false
+          }
+        ]
+      }
+    ],
+    "relationships": []
+  }
+}
+```
+
+### 4. Export Schema to SQL DDL
+```bash
+curl -X POST http://localhost:4000/api/schema/export \
+  -H "Content-Type: application/json" \
+  -d '{
+    "schema": {
+      "tables": [
+        {
+          "id": "t_users",
+          "name": "users",
+          "columns": [
+            {
+              "id": "c_users_id",
+              "name": "id",
+              "type": "INTEGER",
+              "primaryKey": true,
+              "nullable": false,
+              "unique": true,
+              "autoIncrement": true
+            }
+          ]
+        }
+      ],
+      "relationships": []
+    },
+    "dialect": "postgresql"
+  }'
+```
+**Response (200 OK):**
+```json
+{
+  "sql": "CREATE TABLE \"users\" (\n  \"id\" SERIAL,\n  CONSTRAINT \"pk_users\" PRIMARY KEY (\"id\")\n);"
+}
+```

@@ -9,5 +9,11 @@ export default defineConfig({
     globals: true,
     root: './',
     include: ['**/*.spec.ts'],
+    env: {
+      NODE_ENV: 'test',
+      GEMINI_API_KEY: 'test-api-key',
+      GEMINI_MODEL: 'gemini-2.5-flash',
+      CORS_ORIGIN: 'http://localhost:3000',
+    },
   },
 });

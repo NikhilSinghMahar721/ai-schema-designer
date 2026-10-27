@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { SchemaZ, DialectZ } from '../schema.types.js';
 
-export const ExportDtoZ = z.object({
+export const ExportDtoZ = z.strictObject({
   schema: SchemaZ,
   dialect: DialectZ,
 });
