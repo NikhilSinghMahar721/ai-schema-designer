@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { api, ApiClientError } from '../../../lib/api';
 import { useSchemaStore } from '../../designer/store/schema.store';
 import type { Dialect } from '../../designer/types';
+import { ErrorBanner } from '../../designer/components/ErrorBanner';
 
 interface SchemaItem {
   id: string;
@@ -21,6 +22,7 @@ export function SavedSchemasList() {
   const [items, setItems] = useState<SchemaItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
 
   // Rename state
   const [renameItem, setRenameItem] = useState<SchemaItem | null>(null);
@@ -37,14 +39,17 @@ export function SavedSchemasList() {
     try {
       setIsLoading(true);
       setError(null);
+      setErrorStatus(null);
       const res = await api.listSavedSchemas();
       setItems(res.items);
     } catch (err) {
-      const msg =
-        err instanceof ApiClientError
-          ? err.message
-          : 'Failed to load saved schemas.';
-      setError(msg);
+      if (err instanceof ApiClientError) {
+        setError(err.message);
+        setErrorStatus(err.status);
+      } else {
+        setError('Failed to load saved schemas.');
+        setErrorStatus(null);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -62,11 +67,13 @@ export function SavedSchemasList() {
         }
       } catch (err) {
         if (!ignore) {
-          const msg =
-            err instanceof ApiClientError
-              ? err.message
-              : 'Failed to load saved schemas.';
-          setError(msg);
+          if (err instanceof ApiClientError) {
+            setError(err.message);
+            setErrorStatus(err.status);
+          } else {
+            setError('Failed to load saved schemas.');
+            setErrorStatus(null);
+          }
           setIsLoading(false);
         }
       }
@@ -193,11 +200,18 @@ export function SavedSchemasList() {
           </div>
         ) : error ? (
           <div className="p-8 text-center rounded-2xl bg-slate-900/40 border border-slate-800">
-            <p className="text-sm text-red-400 mb-3">{error}</p>
+            <ErrorBanner
+              error={error}
+              statusCode={errorStatus ?? undefined}
+              onDismiss={() => {
+                setError(null);
+                setErrorStatus(null);
+              }}
+            />
             <button
               type="button"
               onClick={reload}
-              className="px-4 py-2 rounded-xl text-xs bg-slate-800 hover:bg-slate-700 text-white transition-colors"
+              className="px-4 py-2 rounded-xl text-xs bg-slate-800 hover:bg-slate-700 text-white transition-colors mt-3"
             >
               Retry
             </button>

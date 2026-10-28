@@ -9,6 +9,7 @@
 import React, { useState } from 'react';
 import { useSchemaStore } from '../store/schema.store';
 import { RefineBox } from './RefineBox';
+import { ErrorBanner } from './ErrorBanner';
 
 const SAMPLE_PROMPTS = [
   {
@@ -37,6 +38,7 @@ export function DescribePanel() {
     generateFromDescription,
     isGenerating,
     error,
+    errorStatus,
     setError,
     loadSample,
   } = useSchemaStore();
@@ -116,9 +118,11 @@ export function DescribePanel() {
           <label className="text-xs font-medium text-slate-300 block mb-1.5">
             Target SQL Dialect
           </label>
-          <div className="grid grid-cols-2 gap-2 p-1 bg-slate-950/60 rounded-lg border border-slate-800">
+          <div role="radiogroup" aria-label="Target SQL Dialect">
             <button
               type="button"
+              role="radio"
+              aria-checked={dialect === 'postgresql'}
               onClick={() => setDialect('postgresql')}
               className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-medium transition-all ${
                 dialect === 'postgresql'
@@ -130,6 +134,8 @@ export function DescribePanel() {
             </button>
             <button
               type="button"
+              role="radio"
+              aria-checked={dialect === 'mysql'}
               onClick={() => setDialect('mysql')}
               className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-medium transition-all ${
                 dialect === 'mysql'
@@ -152,6 +158,7 @@ export function DescribePanel() {
               Requirements Prompt
             </label>
             <span
+              id="description-counter"
               className={`text-[11px] font-mono ${
                 isOverLimit
                   ? 'text-rose-400 font-bold'
@@ -170,6 +177,7 @@ export function DescribePanel() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             disabled={isGenerating}
+            aria-describedby="description-counter"
             placeholder="e.g. Design a food delivery app with restaurants, menu items, customer orders, delivery drivers, and review ratings..."
             className={`w-full rounded-lg bg-slate-950/70 border p-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none transition-all resize-y ${
               isOverLimit
@@ -214,14 +222,11 @@ export function DescribePanel() {
         </div>
 
         {/* Error Alert */}
-        {error && (
-          <div className="p-3 rounded-lg bg-rose-950/50 border border-rose-800/80 text-rose-200 text-xs">
-            <div className="font-semibold flex items-center gap-1.5 mb-0.5">
-              <span>⚠️</span> Generation Error
-            </div>
-            <p className="text-rose-300/90 leading-relaxed">{error}</p>
-          </div>
-        )}
+        <ErrorBanner
+          error={error}
+          statusCode={errorStatus ?? undefined}
+          onDismiss={() => setError(null)}
+        />
 
         {/* Action buttons */}
         <div className="flex flex-col gap-2 pt-1">

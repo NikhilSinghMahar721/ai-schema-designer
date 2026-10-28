@@ -10,6 +10,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useSchemaStore } from '../store/schema.store';
 import { api, ApiClientError } from '../../../lib/api';
+import { ErrorBanner } from './ErrorBanner';
 
 export function SqlPreview() {
   const {
@@ -24,6 +25,7 @@ export function SqlPreview() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
   const [jsonNotice, setJsonNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -51,8 +53,10 @@ export function SqlPreview() {
         if (!isCancelled) {
           if (err instanceof ApiClientError) {
             setError(err.message);
+            setErrorStatus(err.status);
           } else {
             setError('Backend unavailable. Start the backend server to generate live SQL DDL.');
+            setErrorStatus(null);
           }
         }
       } finally {
@@ -190,9 +194,14 @@ export function SqlPreview() {
             <span>Compiling DDL...</span>
           </div>
         ) : error ? (
-          <div className="p-3 text-rose-400 bg-rose-950/30 rounded-lg text-xs">
-            <span className="font-bold">Notice:</span> {error}
-          </div>
+          <ErrorBanner
+            error={error}
+            statusCode={errorStatus ?? undefined}
+            onDismiss={() => {
+              setError(null);
+              setErrorStatus(null);
+            }}
+          />
         ) : (
           <pre className="text-slate-200 whitespace-pre overflow-x-auto leading-relaxed">
             <code>{sql}</code>

@@ -108,6 +108,8 @@ export function UserMenu() {
     <div className="relative" ref={dropdownRef}>
       <button
         type="button"
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 text-slate-200 text-xs font-medium transition-all cursor-pointer"
       >

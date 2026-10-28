@@ -226,6 +226,7 @@ export interface SchemaStoreState {
   isGenerating: boolean;
   isRefining: boolean;
   error: string | null;
+  errorStatus: number | null;
   generatedAt: Date | null;
   validationErrors: string[];
 
@@ -303,6 +304,7 @@ export const useSchemaStore = create<SchemaStoreState>((set, get) => {
       future: [],
       validationErrors,
       error: null,
+      errorStatus: null,
     });
   };
 
@@ -312,6 +314,7 @@ export const useSchemaStore = create<SchemaStoreState>((set, get) => {
     isGenerating: false,
     isRefining: false,
     error: null,
+    errorStatus: null,
     generatedAt: new Date(),
     validationErrors: initialValidation,
 
@@ -328,12 +331,18 @@ export const useSchemaStore = create<SchemaStoreState>((set, get) => {
       if (recordHistory) {
         commitSchema(newSchema);
       } else {
-        set({ schema: newSchema, validationErrors, error: null });
+        set({
+          schema: newSchema,
+          validationErrors,
+          error: null,
+          errorStatus: null,
+        });
       }
     },
 
     setDialect: (dialect: Dialect) => set({ dialect }),
-    setError: (error: string | null) => set({ error }),
+    setError: (error: string | null, statusCode?: number | null) =>
+      set({ error, errorStatus: statusCode ?? null }),
 
     loadSample: () => {
       const newPositions = computeAutoLayout(SAMPLE_SCHEMA);
@@ -359,7 +368,7 @@ export const useSchemaStore = create<SchemaStoreState>((set, get) => {
 
     generateFromDescription: async (description: string) => {
       const { dialect } = get();
-      set({ isGenerating: true, error: null });
+      set({ isGenerating: true, error: null, errorStatus: null });
 
       try {
         const generatedSchema = await api.generateSchema(description, dialect);
@@ -368,6 +377,7 @@ export const useSchemaStore = create<SchemaStoreState>((set, get) => {
         set({
           isGenerating: false,
           error: null,
+          errorStatus: null,
           generatedAt: new Date(),
           nodePositions: newPositions,
           selectedTableId: null,
@@ -377,19 +387,21 @@ export const useSchemaStore = create<SchemaStoreState>((set, get) => {
         return true;
       } catch (err: unknown) {
         let message = 'Failed to generate schema';
+        let statusCode: number | null = null;
         if (err instanceof ApiClientError) {
           message = err.message;
+          statusCode = err.status;
         } else if (err instanceof Error) {
           message = err.message;
         }
-        set({ error: message, isGenerating: false });
+        set({ error: message, errorStatus: statusCode, isGenerating: false });
         return false;
       }
     },
 
     refineFromInstruction: async (instruction: string) => {
       const { schema } = get();
-      set({ isRefining: true, error: null });
+      set({ isRefining: true, error: null, errorStatus: null });
 
       try {
         const refinedSchema = await api.refineSchema(schema, instruction);
@@ -411,6 +423,7 @@ export const useSchemaStore = create<SchemaStoreState>((set, get) => {
         set({
           isRefining: false,
           error: null,
+          errorStatus: null,
           nodePositions: currentPositions,
           generatedAt: new Date(),
         });
@@ -418,12 +431,14 @@ export const useSchemaStore = create<SchemaStoreState>((set, get) => {
         return { success: true, diff };
       } catch (err: unknown) {
         let message = 'Failed to refine schema';
+        let statusCode: number | null = null;
         if (err instanceof ApiClientError) {
           message = err.message;
+          statusCode = err.status;
         } else if (err instanceof Error) {
           message = err.message;
         }
-        set({ error: message, isRefining: false });
+        set({ error: message, errorStatus: statusCode, isRefining: false });
         return { success: false, error: message };
       }
     },
@@ -468,6 +483,7 @@ export const useSchemaStore = create<SchemaStoreState>((set, get) => {
           selectedColumnId: null,
           selectedRelationshipId: null,
           error: null,
+          errorStatus: null,
         });
 
         return { success: true };
