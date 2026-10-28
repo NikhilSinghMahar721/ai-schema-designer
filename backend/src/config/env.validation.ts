@@ -32,16 +32,12 @@ export const EnvSchema = z.object({
     .transform((v) => parseInt(v, 10))
     .pipe(z.number().int().min(1)),
 
-  // Account-related (optional until Phase 8)
-  DATABASE_URL: z.string().optional(),
+  // Account & database configuration (Phase 8+)
+  DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   JWT_SECRET: z
     .string()
-    .optional()
-    .refine(
-      (val) => val === undefined || val.length >= 32,
-      'JWT_SECRET must be at least 32 characters',
-    ),
-  JWT_EXPIRES_IN: z.string().optional(),
+    .min(32, 'JWT_SECRET must be at least 32 characters'),
+  JWT_EXPIRES_IN: z.string().default('1h'),
   COOKIE_SECURE: z
     .string()
     .default('false')
