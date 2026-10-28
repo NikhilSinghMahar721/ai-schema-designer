@@ -6,6 +6,7 @@ import { validateEnv } from './config/env.validation.js';
 import { SchemaModule } from './schema/schema.module.js';
 import { DatabaseModule } from './database/database.module.js';
 import { UsersModule } from './users/users.module.js';
+import { AuthModule } from './auth/auth.module.js';
 import { HealthController } from './health.controller.js';
 
 @Module({
@@ -28,6 +29,7 @@ import { HealthController } from './health.controller.js';
     SchemaModule,
     DatabaseModule,
     UsersModule,
+    AuthModule,
   ],
   controllers: [HealthController],
   providers: [

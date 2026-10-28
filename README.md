@@ -252,3 +252,88 @@ curl -X POST http://localhost:4000/api/schema/export \
   "sql": "CREATE TABLE \"users\" (\n  \"id\" SERIAL,\n  CONSTRAINT \"pk_users\" PRIMARY KEY (\"id\")\n);"
 }
 ```
+
+---
+
+## 🔐 Auth & Account Endpoints
+
+Session management uses `httpOnly`, `SameSite=Lax` cookies with pinned `HS256` JWTs. CSRF protection verifies `application/json` content type and matches `Origin` headers.
+
+### 5. Register User
+```bash
+curl -i -X POST http://localhost:4000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -H "Origin: http://localhost:3000" \
+  -d '{
+    "email": "developer@example.com",
+    "password": "strongPassword123!"
+  }'
+```
+**Response (201 Created):**
+`Set-Cookie: session=<token>; Path=/; HttpOnly; SameSite=Lax`
+```json
+{
+  "user": {
+    "id": "e6a21074-b25c-4d37-8ff9-b36c2cf59ea1",
+    "email": "developer@example.com"
+  }
+}
+```
+
+### 6. Login
+```bash
+curl -i -X POST http://localhost:4000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -H "Origin: http://localhost:3000" \
+  -d '{
+    "email": "developer@example.com",
+    "password": "strongPassword123!"
+  }'
+```
+**Response (200 OK):**
+`Set-Cookie: session=<token>; Path=/; HttpOnly; SameSite=Lax`
+```json
+{
+  "user": {
+    "id": "e6a21074-b25c-4d37-8ff9-b36c2cf59ea1",
+    "email": "developer@example.com"
+  }
+}
+```
+
+### 7. Current Authenticated User (`/me`)
+```bash
+curl -X GET http://localhost:4000/api/auth/me \
+  --cookie "session=<token>"
+```
+**Response (200 OK):**
+```json
+{
+  "user": {
+    "id": "e6a21074-b25c-4d37-8ff9-b36c2cf59ea1",
+    "email": "developer@example.com"
+  }
+}
+```
+
+### 8. Logout
+```bash
+curl -i -X POST http://localhost:4000/api/auth/logout \
+  -H "Origin: http://localhost:3000" \
+  --cookie "session=<token>"
+```
+**Response (204 No Content):**
+`Set-Cookie: session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
+
+### 9. Delete Account
+```bash
+curl -i -X DELETE http://localhost:4000/api/auth/me \
+  -H "Content-Type: application/json" \
+  -H "Origin: http://localhost:3000" \
+  --cookie "session=<token>" \
+  -d '{
+    "password": "strongPassword123!"
+  }'
+```
+**Response (204 No Content)**
+
