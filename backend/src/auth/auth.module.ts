@@ -28,6 +28,6 @@ import { UsersModule } from '../users/users.module.js';
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtAuthGuard, CsrfGuard],
-  exports: [AuthService, JwtAuthGuard, JwtModule, CsrfGuard],
+  exports: [AuthService, JwtAuthGuard, JwtModule, CsrfGuard, UsersModule],
 })
 export class AuthModule {}

@@ -7,6 +7,7 @@ import { SchemaModule } from './schema/schema.module.js';
 import { DatabaseModule } from './database/database.module.js';
 import { UsersModule } from './users/users.module.js';
 import { AuthModule } from './auth/auth.module.js';
+import { SavedSchemasModule } from './saved-schemas/saved-schemas.module.js';
 import { HealthController } from './health.controller.js';
 
 @Module({
@@ -30,6 +31,7 @@ import { HealthController } from './health.controller.js';
     DatabaseModule,
     UsersModule,
     AuthModule,
+    SavedSchemasModule,
   ],
   controllers: [HealthController],
   providers: [

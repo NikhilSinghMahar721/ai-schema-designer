@@ -337,3 +337,84 @@ curl -i -X DELETE http://localhost:4000/api/auth/me \
 ```
 **Response (204 No Content)**
 
+---
+
+## 💾 Saved Schemas Endpoints
+
+All saved-schema endpoints require an authenticated session cookie. `userId` is strictly resolved server-side from the verified session (IDOR protection). Every operation verifies schema validity and enforces limits (50 schemas per user, 200 KB per schema, names 1–100 chars).
+
+### 10. List Saved Schemas
+```bash
+curl -X GET http://localhost:4000/api/saved-schemas \
+  --cookie "session=<token>"
+```
+**Response (200 OK):**
+```json
+{
+  "items": [
+    {
+      "id": "7b3b3a4a-0a78-45b6-9467-1fa75f28fce4",
+      "name": "E-Commerce Database",
+      "dialect": "postgresql",
+      "updatedAt": "2026-10-28T19:40:00.000Z"
+    }
+  ]
+}
+```
+
+### 11. Save New Schema
+```bash
+curl -i -X POST http://localhost:4000/api/saved-schemas \
+  -H "Content-Type: application/json" \
+  -H "Origin: http://localhost:3000" \
+  --cookie "session=<token>" \
+  -d '{
+    "name": "E-Commerce Database",
+    "dialect": "postgresql",
+    "schema": {
+      "tables": [ ... ],
+      "relationships": [ ... ]
+    }
+  }'
+```
+**Response (201 Created):**
+```json
+{
+  "item": {
+    "id": "7b3b3a4a-0a78-45b6-9467-1fa75f28fce4",
+    "name": "E-Commerce Database",
+    "dialect": "postgresql",
+    "schema": { ... },
+    "createdAt": "2026-10-28T19:40:00.000Z",
+    "updatedAt": "2026-10-28T19:40:00.000Z"
+  }
+}
+```
+
+### 12. Get Schema by ID
+```bash
+curl -X GET http://localhost:4000/api/saved-schemas/7b3b3a4a-0a78-45b6-9467-1fa75f28fce4 \
+  --cookie "session=<token>"
+```
+**Response (200 OK or 404 if not found or belongs to another user)**
+
+### 13. Update Saved Schema
+```bash
+curl -i -X PUT http://localhost:4000/api/saved-schemas/7b3b3a4a-0a78-45b6-9467-1fa75f28fce4 \
+  -H "Content-Type: application/json" \
+  -H "Origin: http://localhost:3000" \
+  --cookie "session=<token>" \
+  -d '{
+    "name": "Updated E-Commerce Schema"
+  }'
+```
+**Response (200 OK)**
+
+### 14. Delete Saved Schema
+```bash
+curl -i -X DELETE http://localhost:4000/api/saved-schemas/7b3b3a4a-0a78-45b6-9467-1fa75f28fce4 \
+  -H "Origin: http://localhost:3000" \
+  --cookie "session=<token>"
+```
+**Response (204 No Content)**
+
