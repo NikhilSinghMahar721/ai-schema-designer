@@ -12,11 +12,14 @@ import React, { useState } from 'react';
 import { DescribePanel } from '../features/designer/components/DescribePanel';
 import { DiagramCanvas } from '../features/designer/components/DiagramCanvas';
 import { SqlPreview } from '../features/designer/components/SqlPreview';
+import { UserMenu } from '../features/auth/components/UserMenu';
+import { SaveDialog } from '../features/saved-schemas/components/SaveDialog';
 
 type MobileTab = 'describe' | 'diagram' | 'sql';
 
 export default function DesignerPage() {
   const [mobileTab, setMobileTab] = useState<MobileTab>('diagram');
+  const [isSaveOpen, setIsSaveOpen] = useState(false);
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-950">
@@ -31,9 +34,6 @@ export default function DesignerPage() {
               AI Schema Designer
             </span>
           </div>
-          <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-medium border border-slate-700">
-            Guest Mode
-          </span>
         </div>
 
         {/* Mobile Tab Switcher */}
@@ -74,20 +74,23 @@ export default function DesignerPage() {
         </div>
 
         {/* Right Nav Utilities */}
-        <div className="hidden sm:flex items-center gap-3 text-xs">
-          <span className="text-slate-400">
-            Export ready: <span className="text-emerald-400 font-mono">PostgreSQL</span> / <span className="text-amber-400 font-mono">MySQL</span>
-          </span>
-          <a
-            href="https://github.com"
-            target="_blank"
-            rel="noreferrer"
-            className="py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors"
+        <div className="flex items-center gap-3 text-xs">
+          <button
+            type="button"
+            onClick={() => setIsSaveOpen(true)}
+            className="py-1.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium flex items-center gap-1.5 transition-all shadow-sm shadow-indigo-600/30 text-xs cursor-pointer"
           >
-            Docs & Help
-          </a>
+            <span>💾</span>
+            <span>Save Schema</span>
+          </button>
+
+          <div className="h-4 w-px bg-slate-800 mx-1 hidden sm:block" />
+
+          <UserMenu />
         </div>
       </header>
+
+      <SaveDialog isOpen={isSaveOpen} onClose={() => setIsSaveOpen(false)} />
 
       {/* Main 3-Area Studio Layout */}
       <main className="flex-1 flex overflow-hidden">

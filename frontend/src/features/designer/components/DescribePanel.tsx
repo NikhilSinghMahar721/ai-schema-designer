@@ -275,6 +275,21 @@ export function DescribePanel() {
             Reset to Sample Schema
           </button>
         </div>
+
+        {/* Privacy & Storage Notice (T11.8 / Security V10) */}
+        <div className="mt-1 p-2.5 rounded-xl bg-slate-950/50 border border-slate-800/80 text-[11px] text-slate-400 leading-relaxed">
+          <div className="flex items-center gap-1.5 text-slate-300 font-semibold mb-1">
+            <span>🛡️</span>
+            <span>Privacy & Storage Notice</span>
+          </div>
+          <p>
+            Descriptions are sent to an AI service to compile relational schemas. Do not enter confidential or proprietary data.
+          </p>
+          <div className="mt-1.5 pt-1.5 border-t border-slate-800/60 text-[10px] text-slate-500 space-y-0.5">
+            <div><strong className="text-slate-400">Stored:</strong> Your email and schemas you explicitly save.</div>
+            <div><strong className="text-slate-400">Never stored:</strong> Natural language prompts or descriptions.</div>
+          </div>
+        </div>
       </form>
       )}
     </div>

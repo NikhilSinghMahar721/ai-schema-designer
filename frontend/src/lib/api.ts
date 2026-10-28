@@ -105,4 +105,158 @@ export const api = {
     });
     return data.sql;
   },
+
+  // ── Auth Endpoints ──────────────────────────────────────────────────────────
+
+  async register(
+    email: string,
+    password: string,
+  ): Promise<{ user: { id: string; email: string } }> {
+    return request<{ user: { id: string; email: string } }>(
+      '/api/auth/register',
+      {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      },
+    );
+  },
+
+  async login(
+    email: string,
+    password: string,
+  ): Promise<{ user: { id: string; email: string } }> {
+    return request<{ user: { id: string; email: string } }>(
+      '/api/auth/login',
+      {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      },
+    );
+  },
+
+  async logout(): Promise<void> {
+    await request<void>('/api/auth/logout', {
+      method: 'POST',
+    });
+  },
+
+  async getMe(): Promise<{ user: { id: string; email: string } }> {
+    return request<{ user: { id: string; email: string } }>('/api/auth/me');
+  },
+
+  async deleteAccount(password: string): Promise<void> {
+    await request<void>('/api/auth/me', {
+      method: 'DELETE',
+      body: JSON.stringify({ password }),
+    });
+  },
+
+  // ── Saved Schemas Endpoints ─────────────────────────────────────────────────
+
+  async listSavedSchemas(): Promise<{
+    items: Array<{
+      id: string;
+      name: string;
+      dialect: Dialect;
+      updatedAt: string;
+    }>;
+  }> {
+    return request<{
+      items: Array<{
+        id: string;
+        name: string;
+        dialect: Dialect;
+        updatedAt: string;
+      }>;
+    }>('/api/saved-schemas');
+  },
+
+  async getSavedSchema(id: string): Promise<{
+    item: {
+      id: string;
+      name: string;
+      dialect: Dialect;
+      schema: Schema;
+      createdAt: string;
+      updatedAt: string;
+    };
+  }> {
+    return request<{
+      item: {
+        id: string;
+        name: string;
+        dialect: Dialect;
+        schema: Schema;
+        createdAt: string;
+        updatedAt: string;
+      };
+    }>(`/api/saved-schemas/${id}`);
+  },
+
+  async createSavedSchema(payload: {
+    name: string;
+    dialect: Dialect;
+    schema: Schema;
+  }): Promise<{
+    item: {
+      id: string;
+      name: string;
+      dialect: Dialect;
+      schema: Schema;
+      createdAt: string;
+      updatedAt: string;
+    };
+  }> {
+    return request<{
+      item: {
+        id: string;
+        name: string;
+        dialect: Dialect;
+        schema: Schema;
+        createdAt: string;
+        updatedAt: string;
+      };
+    }>('/api/saved-schemas', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async updateSavedSchema(
+    id: string,
+    payload: {
+      name?: string;
+      dialect?: Dialect;
+      schema?: Schema;
+    },
+  ): Promise<{
+    item: {
+      id: string;
+      name: string;
+      dialect: Dialect;
+      schema: Schema;
+      createdAt: string;
+      updatedAt: string;
+    };
+  }> {
+    return request<{
+      item: {
+        id: string;
+        name: string;
+        dialect: Dialect;
+        schema: Schema;
+        createdAt: string;
+        updatedAt: string;
+      };
+    }>(`/api/saved-schemas/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async deleteSavedSchema(id: string): Promise<void> {
+    await request<void>(`/api/saved-schemas/${id}`, {
+      method: 'DELETE',
+    });
+  },
 };
