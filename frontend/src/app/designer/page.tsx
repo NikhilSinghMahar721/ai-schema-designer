@@ -18,12 +18,14 @@ import { SqlPreview } from '../../features/designer/components/SqlPreview';
 import { UserMenu } from '../../features/auth/components/UserMenu';
 import { SaveDialog } from '../../features/saved-schemas/components/SaveDialog';
 import { useAuthStore } from '../../features/auth/store/auth.store';
+import { useIsMounted } from '../../lib/useIsMounted';
 
 type MobileTab = 'describe' | 'diagram' | 'sql';
 
 export default function DesignerPage() {
   const [mobileTab, setMobileTab] = useState<MobileTab>('diagram');
   const [isSaveOpen, setIsSaveOpen] = useState(false);
+  const mounted = useIsMounted();
   const { user, isInitialLoading, fetchCurrentUser } = useAuthStore();
 
   useEffect(() => {
@@ -33,7 +35,7 @@ export default function DesignerPage() {
   return (
     <div className="relative flex flex-col h-screen w-screen overflow-hidden bg-zinc-950 text-zinc-100">
       {/* Unauthenticated Access Gate */}
-      {!isInitialLoading && !user && (
+      {mounted && !isInitialLoading && !user && (
         <div className="absolute inset-0 bg-zinc-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-xl p-6 shadow-2xl text-center">
             <div className="h-10 w-10 rounded-lg bg-zinc-800 flex items-center justify-center text-white font-mono font-bold text-sm mx-auto mb-4">

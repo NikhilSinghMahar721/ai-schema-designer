@@ -4,8 +4,10 @@ import {
   ConflictException,
   PayloadTooLargeException,
   BadRequestException,
+  Optional,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service.js';
+import { LocalStorageService } from '../database/local-storage.service.js';
 import { SchemaZ, type Schema } from '../schema/schema.types.js';
 import {
   validateSemantics,
@@ -45,7 +47,17 @@ export interface SavedSchemaDetail {
 
 @Injectable()
 export class SavedSchemasService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly localStorage?: LocalStorageService,
+  ) {}
+
+  private get useLocal(): boolean {
+    return (
+      (this.prisma.isConnected === false || !this.prisma.savedSchema) &&
+      !!this.localStorage
+    );
+  }
 
   /**
    * Re-validates a schema (Zod structure + semantic rules + size limit).
@@ -84,6 +96,21 @@ export class SavedSchemasService {
   }
 
   async list(userId: string): Promise<{ items: SavedSchemaListItem[] }> {
+    if (this.useLocal && this.localStorage) {
+      const items = await this.localStorage.savedSchemas.findMany({
+        where: { userId },
+        orderBy: { updatedAt: 'desc' },
+      });
+      return {
+        items: items.map((i) => ({
+          id: i.id,
+          name: i.name,
+          dialect: i.dialect,
+          updatedAt: i.updatedAt,
+        })),
+      };
+    }
+
     const items = await this.prisma.savedSchema.findMany({
       where: { userId },
       select: {
@@ -101,9 +128,9 @@ export class SavedSchemasService {
   async get(userId: string, id: string): Promise<{ item: SavedSchemaDetail }> {
     assertValidUuid(id);
 
-    const record = await this.prisma.savedSchema.findFirst({
-      where: { id, userId },
-    });
+    const record = this.useLocal && this.localStorage
+      ? await this.localStorage.savedSchemas.findFirst({ where: { id, userId } })
+      : await this.prisma.savedSchema.findFirst({ where: { id, userId } });
 
     if (!record) {
       throw new NotFoundException('Saved schema not found');
@@ -129,9 +156,10 @@ export class SavedSchemasService {
     dto: CreateSavedSchemaDto,
   ): Promise<{ item: SavedSchemaDetail }> {
     // 1. Enforce max 50 schemas per user limit (T10.4 / Security V24)
-    const count = await this.prisma.savedSchema.count({
-      where: { userId },
-    });
+    const count = this.useLocal && this.localStorage
+      ? await this.localStorage.savedSchemas.count({ where: { userId } })
+      : await this.prisma.savedSchema.count({ where: { userId } });
+
     if (count >= MAX_SAVED_SCHEMAS_PER_USER) {
       throw new ConflictException('Maximum limit of 50 saved schemas reached');
     }
@@ -140,14 +168,23 @@ export class SavedSchemasService {
     const validatedSchema = this.validateSchema(dto.schema);
 
     // 3. Persist record strictly associated with authenticated userId
-    const record = await this.prisma.savedSchema.create({
-      data: {
-        userId,
-        name: dto.name,
-        dialect: dto.dialect,
-        schemaJson: validatedSchema as unknown as Prisma.InputJsonValue,
-      },
-    });
+    const record = this.useLocal && this.localStorage
+      ? await this.localStorage.savedSchemas.create({
+          data: {
+            userId,
+            name: dto.name,
+            dialect: dto.dialect,
+            schemaJson: validatedSchema,
+          },
+        })
+      : await this.prisma.savedSchema.create({
+          data: {
+            userId,
+            name: dto.name,
+            dialect: dto.dialect,
+            schemaJson: validatedSchema as unknown as Prisma.InputJsonValue,
+          },
+        });
 
     return {
       item: {
@@ -169,14 +206,15 @@ export class SavedSchemasService {
     assertValidUuid(id);
 
     // Always filter by both id and userId (IDOR prevention / Security V19)
-    const existing = await this.prisma.savedSchema.findFirst({
-      where: { id, userId },
-    });
+    const existing = this.useLocal && this.localStorage
+      ? await this.localStorage.savedSchemas.findFirst({ where: { id, userId } })
+      : await this.prisma.savedSchema.findFirst({ where: { id, userId } });
+
     if (!existing) {
       throw new NotFoundException('Saved schema not found');
     }
 
-    const updateData: Prisma.SavedSchemaUpdateInput = {};
+    const updateData: { name?: string; dialect?: string; schemaJson?: any } = {};
     let returnedSchema: Schema = existing.schemaJson as unknown as Schema;
 
     if (dto.name !== undefined) {
@@ -187,14 +225,19 @@ export class SavedSchemasService {
     }
     if (dto.schema !== undefined) {
       const validated = this.validateSchema(dto.schema);
-      updateData.schemaJson = validated as unknown as Prisma.InputJsonValue;
+      updateData.schemaJson = validated;
       returnedSchema = validated;
     }
 
-    const updated = await this.prisma.savedSchema.update({
-      where: { id },
-      data: updateData,
-    });
+    const updated = this.useLocal && this.localStorage
+      ? await this.localStorage.savedSchemas.update({
+          where: { id },
+          data: updateData,
+        })
+      : await this.prisma.savedSchema.update({
+          where: { id },
+          data: updateData as Prisma.SavedSchemaUpdateInput,
+        });
 
     return {
       item: {
@@ -211,15 +254,18 @@ export class SavedSchemasService {
   async delete(userId: string, id: string): Promise<void> {
     assertValidUuid(id);
 
-    const existing = await this.prisma.savedSchema.findFirst({
-      where: { id, userId },
-    });
+    const existing = this.useLocal && this.localStorage
+      ? await this.localStorage.savedSchemas.findFirst({ where: { id, userId } })
+      : await this.prisma.savedSchema.findFirst({ where: { id, userId } });
+
     if (!existing) {
       throw new NotFoundException('Saved schema not found');
     }
 
-    await this.prisma.savedSchema.delete({
-      where: { id },
-    });
+    if (this.useLocal && this.localStorage) {
+      await this.localStorage.savedSchemas.delete({ where: { id } });
+    } else {
+      await this.prisma.savedSchema.delete({ where: { id } });
+    }
   }
 }

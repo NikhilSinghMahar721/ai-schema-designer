@@ -10,14 +10,18 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuthStore } from '../features/auth/store/auth.store';
 import { UserMenu } from '../features/auth/components/UserMenu';
+import { useIsMounted } from '../lib/useIsMounted';
 
 export default function LandingPage() {
   const { user, fetchCurrentUser } = useAuthStore();
   const [activeDialect, setActiveDialect] = useState<'postgresql' | 'mysql'>('postgresql');
+  const mounted = useIsMounted();
 
   useEffect(() => {
     fetchCurrentUser();
   }, [fetchCurrentUser]);
+
+  const isLoggedIn = mounted && !!user;
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 selection:bg-zinc-800 selection:text-white">
@@ -54,7 +58,7 @@ export default function LandingPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            {user ? (
+            {isLoggedIn ? (
               <div className="flex items-center gap-3">
                 <Link
                   href="/designer"
@@ -104,10 +108,10 @@ export default function LandingPage() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-14">
             <Link
-              href={user ? '/designer' : '/register'}
+              href={isLoggedIn ? '/designer' : '/register'}
               className="w-full sm:w-auto px-6 py-3 rounded-lg bg-white text-zinc-950 font-medium text-sm hover:bg-zinc-200 transition-colors flex items-center justify-center gap-2 group shadow-sm"
             >
-              <span>{user ? 'Open Studio Workspace' : 'Start Designing Free'}</span>
+              <span>{isLoggedIn ? 'Open Studio Workspace' : 'Start Designing Free'}</span>
               <span className="group-hover:translate-x-0.5 transition-transform">→</span>
             </Link>
 
@@ -514,12 +518,12 @@ ALTER TABLE \`orders\`
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
-              href={user ? '/designer' : '/register'}
+              href={isLoggedIn ? '/designer' : '/register'}
               className="w-full sm:w-auto px-6 py-3 rounded-lg bg-white text-zinc-950 font-medium text-sm hover:bg-zinc-200 transition-colors shadow-sm"
             >
-              {user ? 'Open Studio Workspace →' : 'Create Free Account →'}
+              {isLoggedIn ? 'Open Studio Workspace →' : 'Create Free Account →'}
             </Link>
-            {!user && (
+            {!isLoggedIn && (
               <Link
                 href="/login"
                 className="w-full sm:w-auto px-6 py-3 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white font-medium text-sm transition-colors"
@@ -539,7 +543,7 @@ ALTER TABLE \`orders\`
           </div>
 
           <div className="flex items-center gap-6">
-            <Link href={user ? '/designer' : '/login'} className="hover:text-zinc-300 transition-colors">
+            <Link href={isLoggedIn ? '/designer' : '/login'} className="hover:text-zinc-300 transition-colors">
               Studio
             </Link>
             <Link href="/login" className="hover:text-zinc-300 transition-colors">

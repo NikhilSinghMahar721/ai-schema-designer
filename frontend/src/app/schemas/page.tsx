@@ -6,9 +6,11 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '../../features/auth/store/auth.store';
 import { SavedSchemasList } from '../../features/saved-schemas/components/SavedSchemasList';
 import { UserMenu } from '../../features/auth/components/UserMenu';
+import { useIsMounted } from '../../lib/useIsMounted';
 
 export default function SchemasPage() {
   const router = useRouter();
+  const mounted = useIsMounted();
   const { user, isInitialLoading, fetchCurrentUser } = useAuthStore();
 
   useEffect(() => {
@@ -17,12 +19,12 @@ export default function SchemasPage() {
 
   // Guest redirection (UI convenience; backend is the true authority)
   useEffect(() => {
-    if (!isInitialLoading && !user) {
+    if (mounted && !isInitialLoading && !user) {
       router.push('/login');
     }
-  }, [isInitialLoading, user, router]);
+  }, [mounted, isInitialLoading, user, router]);
 
-  if (isInitialLoading) {
+  if (!mounted || isInitialLoading) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
         <div className="flex items-center gap-3 text-zinc-400 text-xs">

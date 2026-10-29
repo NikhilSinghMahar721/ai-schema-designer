@@ -20,6 +20,11 @@ yarn-error.log*
 
 # Testing & Coverage
 coverage/
+*.tsbuildinfo
+
+# Local databases
+backend/data/
+data/
 
 # OS / Editor / Tools
 .DS_Store

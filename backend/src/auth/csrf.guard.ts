@@ -10,13 +10,23 @@ import type { Request } from 'express';
 
 @Injectable()
 export class CsrfGuard implements CanActivate {
-  private readonly allowedOrigin: string;
+  private readonly allowedOrigins: string[];
 
   constructor(private readonly configService: ConfigService) {
-    this.allowedOrigin = this.configService.get<string>(
+    const configured = this.configService.get<string>(
       'CORS_ORIGIN',
       'http://localhost:3000',
     );
+    const origins = configured.split(',').map((o) => o.trim());
+    if (origins.some((o) => o.includes('localhost') || o.includes('127.0.0.1'))) {
+      origins.push(
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        'http://localhost:3001',
+        'http://127.0.0.1:3001',
+      );
+    }
+    this.allowedOrigins = Array.from(new Set(origins));
   }
 
   canActivate(context: ExecutionContext): boolean {
@@ -40,7 +50,7 @@ export class CsrfGuard implements CanActivate {
 
       // 2. Origin header validation if present
       const origin = request.headers['origin'];
-      if (origin && origin !== this.allowedOrigin) {
+      if (origin && !this.allowedOrigins.includes(origin)) {
         throw new ForbiddenException('Cross-origin request blocked');
       }
     }

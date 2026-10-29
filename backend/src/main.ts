@@ -23,7 +23,16 @@ async function bootstrap() {
 
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT', 4000);
-  const corsOrigin = configService.get<string>('CORS_ORIGIN')!;
+  const corsOrigin = configService.get<string>('CORS_ORIGIN', 'http://localhost:3000');
+  const allowedOrigins = corsOrigin.split(',').map((o) => o.trim());
+  if (allowedOrigins.some((o) => o.includes('localhost') || o.includes('127.0.0.1'))) {
+    allowedOrigins.push(
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+      'http://localhost:3001',
+      'http://127.0.0.1:3001',
+    );
+  }
 
   // Security headers
   app.use(helmet());
@@ -31,9 +40,9 @@ async function bootstrap() {
   // Cookie parser (needed for session cookies in later phases)
   app.use(cookieParser());
 
-  // Strict CORS: only the frontend origin is allowed
+  // Strict CORS: frontend origins allowed
   app.enableCors({
-    origin: corsOrigin,
+    origin: Array.from(new Set(allowedOrigins)),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Accept'],
