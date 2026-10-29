@@ -167,9 +167,9 @@ function DiagramCanvasInner() {
   const hasErrors = validationErrors.length > 0;
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-950 overflow-hidden relative">
+    <div className="flex-1 flex flex-col h-full bg-zinc-950 overflow-hidden relative">
       {/* Top Controls Toolbar */}
-      <div className="h-14 border-b border-slate-800 px-4 sm:px-6 flex items-center justify-between bg-slate-900/80 backdrop-blur z-20 shrink-0">
+      <div className="h-14 border-b border-zinc-800 px-4 sm:px-6 flex items-center justify-between bg-zinc-900/90 backdrop-blur z-20 shrink-0">
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           {/* Quick Add Table */}
           <button
@@ -178,9 +178,11 @@ function DiagramCanvasInner() {
               addTable();
               setShowInspector(true);
             }}
-            className="py-1.5 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs flex items-center gap-1.5 transition-colors shadow-sm"
+            className="py-1.5 px-3 rounded-md bg-white hover:bg-zinc-200 text-zinc-950 font-medium text-xs flex items-center gap-1.5 transition-colors shadow-sm"
           >
-            <span>+</span>
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+            </svg>
             <span className="hidden sm:inline">Add Table</span>
           </button>
 
@@ -189,20 +191,22 @@ function DiagramCanvasInner() {
             type="button"
             onClick={recalculateAutoLayout}
             title="Auto-organize table positions"
-            className="py-1.5 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs flex items-center gap-1 transition-colors"
+            className="py-1.5 px-2.5 rounded-md bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300 border border-zinc-700/80 text-xs flex items-center gap-1.5 transition-colors"
           >
-            <span>✨</span>
+            <svg className="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+            </svg>
             <span className="hidden sm:inline">Auto Layout</span>
           </button>
 
           {/* Undo / Redo */}
-          <div className="flex items-center bg-slate-800/80 rounded-lg border border-slate-700 p-0.5">
+          <div className="flex items-center bg-zinc-800/80 rounded-md border border-zinc-700/80 p-0.5">
             <button
               type="button"
               disabled={!canUndo()}
               onClick={undo}
               title="Undo (Ctrl+Z)"
-              className="p-1 rounded text-slate-300 hover:text-white disabled:opacity-40 disabled:hover:text-slate-300 transition-colors"
+              className="p-1 rounded text-zinc-400 hover:text-white disabled:opacity-30 disabled:hover:text-zinc-400 transition-colors"
             >
               <svg
                 className="w-3.5 h-3.5"
@@ -223,7 +227,7 @@ function DiagramCanvasInner() {
               disabled={!canRedo()}
               onClick={redo}
               title="Redo (Ctrl+Y)"
-              className="p-1 rounded text-slate-300 hover:text-white disabled:opacity-40 disabled:hover:text-slate-300 transition-colors"
+              className="p-1 rounded text-zinc-400 hover:text-white disabled:opacity-30 disabled:hover:text-zinc-400 transition-colors"
             >
               <svg
                 className="w-3.5 h-3.5"
@@ -243,13 +247,13 @@ function DiagramCanvasInner() {
 
           {/* Counter Badges */}
           <div className="hidden lg:flex items-center gap-1.5 text-xs">
-            <span className="px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800/60 font-mono text-[11px]">
+            <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700 font-mono text-[11px]">
               {totalTables} {totalTables === 1 ? 'Table' : 'Tables'}
             </span>
-            <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700/60 font-mono text-[11px]">
+            <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700 font-mono text-[11px]">
               {totalColumns} Cols
             </span>
-            <span className="px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800/60 font-mono text-[11px]">
+            <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700 font-mono text-[11px]">
               {totalRelationships} Relations
             </span>
           </div>
@@ -261,10 +265,10 @@ function DiagramCanvasInner() {
           <button
             type="button"
             onClick={() => setShowInspector(true)}
-            className={`px-2.5 py-1 rounded-full text-xs font-medium border flex items-center gap-1.5 transition-colors ${
+            className={`px-2.5 py-1 rounded-md text-xs font-mono font-medium border flex items-center gap-1.5 transition-colors ${
               hasErrors
-                ? 'bg-amber-950/60 text-amber-300 border-amber-800 hover:bg-amber-950'
-                : 'bg-emerald-950/60 text-emerald-300 border-emerald-800/80'
+                ? 'bg-amber-950/40 text-amber-300 border-amber-800/80 hover:bg-amber-950/60'
+                : 'bg-zinc-800 text-zinc-300 border-zinc-700 hover:bg-zinc-700'
             }`}
           >
             <span
@@ -275,7 +279,7 @@ function DiagramCanvasInner() {
             <span>
               {hasErrors
                 ? `${validationErrors.length} ${
-                    validationErrors.length === 1 ? 'Warning' : 'Warnings'
+                    validationErrors.length === 1 ? 'Issue' : 'Issues'
                   }`
                 : 'Valid'}
             </span>
@@ -285,13 +289,15 @@ function DiagramCanvasInner() {
           <button
             type="button"
             onClick={() => setShowInspector(!showInspector)}
-            className={`py-1.5 px-3 rounded-lg border text-xs font-medium transition-colors flex items-center gap-1.5 ${
+            className={`py-1.5 px-3 rounded-md border text-xs font-medium transition-colors flex items-center gap-1.5 ${
               showInspector || selectedTableId || selectedRelationshipId
-                ? 'bg-indigo-950/80 border-indigo-700 text-indigo-200'
-                : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
+                ? 'bg-zinc-800 border-zinc-700 text-white'
+                : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800'
             }`}
           >
-            <span>🛠️</span>
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
             <span className="hidden sm:inline">Inspector</span>
           </button>
         </div>
@@ -302,17 +308,14 @@ function DiagramCanvasInner() {
         {/* React Flow Canvas */}
         <div className="flex-1 h-full relative">
           {isGenerating && (
-            <div className="absolute inset-0 z-30 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center p-8">
+            <div className="absolute inset-0 z-30 bg-zinc-950/85 backdrop-blur-sm flex flex-col items-center justify-center p-8">
               <div className="relative mb-4">
-                <div className="w-14 h-14 rounded-full border-4 border-indigo-500/20 border-t-indigo-500 animate-spin" />
-                <div className="absolute inset-0 flex items-center justify-center text-xl">
-                  ✨
-                </div>
+                <div className="w-10 h-10 rounded-full border-2 border-zinc-700 border-t-white animate-spin" />
               </div>
-              <h3 className="text-base font-semibold text-white mb-1">
+              <h3 className="text-sm font-semibold text-white mb-1">
                 Synthesizing Relational Model...
               </h3>
-              <p className="text-xs text-slate-400 max-w-sm text-center">
+              <p className="text-xs text-zinc-400 max-w-sm text-center">
                 Generating tables, columns, primary and foreign key constraints.
               </p>
             </div>
@@ -320,29 +323,30 @@ function DiagramCanvasInner() {
 
           {/* Empty state when no tables exist */}
           {!isGenerating && schema.tables.length === 0 && (
-            <div className="absolute inset-0 z-20 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center p-8 text-center">
-              <div className="w-16 h-16 rounded-full bg-slate-800/50 border border-slate-700 flex items-center justify-center text-2xl mb-4">
-                🎨
+            <div className="absolute inset-0 z-20 bg-zinc-950/90 backdrop-blur-sm flex flex-col items-center justify-center p-8 text-center">
+              <div className="w-12 h-12 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-4">
+                <svg className="w-6 h-6 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 7v10c0 2 3.5 3 8 3s8-1 8-3V7M4 7c0 2 3.5 3 8 3s8-1 8-3M4 7c0-2 3.5-3 8-3s8 1 8 3m0 5c0 2-3.5 3-8 3s-8-1-8-3" />
+                </svg>
               </div>
-              <h3 className="text-base font-semibold text-white mb-1">
+              <h3 className="text-sm font-semibold text-white mb-1">
                 Start Designing Your Schema
               </h3>
-              <p className="text-xs text-slate-400 max-w-xs mb-6 leading-relaxed">
-                Generate a schema from a description, or add your first table
-                using the inspector panel on the right.
+              <p className="text-xs text-zinc-400 max-w-xs mb-6 leading-relaxed">
+                Describe your application requirement on the left, or add your first table manually using the button below.
               </p>
-              <div className="flex gap-2">
+              <div className="flex gap-2.5">
                 <button
                   type="button"
                   onClick={() => addTable()}
-                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition-colors shadow-sm shadow-indigo-600/30"
+                  className="px-4 py-2 rounded-md bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-medium transition-colors shadow-sm"
                 >
-                  <span>+</span> Add Table
+                  + Add Table
                 </button>
                 <button
                   type="button"
                   onClick={() => loadSample()}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium transition-colors"
+                  className="px-4 py-2 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-medium transition-colors"
                 >
                   Load Sample
                 </button>
@@ -369,27 +373,27 @@ function DiagramCanvasInner() {
               type: 'smoothstep',
             }}
             proOptions={{ hideAttribution: true }}
-            className="bg-slate-950"
+            className="bg-zinc-950"
           >
             <Background
               variant={BackgroundVariant.Dots}
               gap={24}
               size={1.5}
-              color="#334155"
+              color="#27272a"
             />
-            <Controls className="!bg-slate-900 !border-slate-800 !text-slate-200 !shadow-xl [&>button]:!bg-slate-900 [&>button]:!border-slate-800 [&>button]:!text-slate-200 hover:[&>button]:!bg-slate-800" />
+            <Controls className="!bg-zinc-900 !border-zinc-800 !text-zinc-200 !shadow-xl [&>button]:!bg-zinc-900 [&>button]:!border-zinc-800 [&>button]:!text-zinc-200 hover:[&>button]:!bg-zinc-800" />
             <MiniMap
-              nodeStrokeColor="#4f46e5"
-              nodeColor="#1e293b"
-              maskColor="rgba(15, 23, 42, 0.7)"
-              className="!bg-slate-900 !border-slate-800 !rounded-lg overflow-hidden hidden md:block"
+              nodeStrokeColor="#3b82f6"
+              nodeColor="#18181b"
+              maskColor="rgba(9, 9, 11, 0.85)"
+              className="!bg-zinc-900 !border-zinc-800 !rounded-lg overflow-hidden hidden md:block"
             />
           </ReactFlow>
         </div>
 
         {/* Dockable / Collapsible Edit Inspector Panel */}
         {showInspector && (
-          <div className="w-80 md:w-96 border-l border-slate-800 h-full z-10 shrink-0 shadow-2xl transition-all">
+          <div className="w-80 md:w-96 border-l border-zinc-800 h-full z-10 shrink-0 shadow-2xl transition-all">
             <EditPanel />
           </div>
         )}

@@ -2,8 +2,8 @@
 
 /**
  * TableNode.tsx — Custom React Flow node rendering an interactive SQL table card.
- * Includes column handles for foreign-key connection dragging, key badges,
- * and quick actions (add column, edit, delete).
+ * Minimalist, dark technical theme (zinc/carbon) with precise key badges,
+ * column handles for foreign-key connection dragging, and quick actions.
  */
 
 import React, { memo } from 'react';
@@ -48,10 +48,10 @@ export const TableNode = memo(function TableNode({
 
   return (
     <div
-      className={`w-72 rounded-xl border bg-slate-900/95 backdrop-blur-md shadow-2xl transition-all duration-150 overflow-hidden text-xs ${
+      className={`w-72 rounded-lg border bg-zinc-900 shadow-xl transition-all duration-150 overflow-hidden text-xs ${
         isTableSelected
-          ? 'border-indigo-500 ring-2 ring-indigo-500/30 shadow-indigo-500/20'
-          : 'border-slate-800 hover:border-slate-700'
+          ? 'border-blue-500 ring-1 ring-blue-500/40'
+          : 'border-zinc-800 hover:border-zinc-700'
       }`}
       onClick={(e) => {
         e.stopPropagation();
@@ -59,16 +59,20 @@ export const TableNode = memo(function TableNode({
       }}
     >
       {/* Table Card Header (Draggable) */}
-      <div className="table-drag-handle cursor-grab active:cursor-grabbing bg-slate-800/80 border-b border-slate-700/80 px-3.5 py-2.5 flex items-center justify-between select-none">
+      <div className="table-drag-handle cursor-grab active:cursor-grabbing bg-zinc-850 border-b border-zinc-800 px-3 py-2 flex items-center justify-between select-none">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-indigo-400 font-bold text-sm">🗄️</span>
+          <svg className="w-3.5 h-3.5 text-zinc-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <ellipse cx="12" cy="5" rx="9" ry="3" strokeWidth={1.75} />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3" />
+          </svg>
           <span
-            className="font-bold text-slate-100 font-mono text-xs truncate max-w-[130px]"
+            className="font-bold text-zinc-100 font-mono text-xs truncate max-w-[130px]"
             title={table.name}
           >
             {table.name}
           </span>
-          <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-400 border border-slate-700 font-mono">
+          <span className="text-[10px] px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400 border border-zinc-700 font-mono">
             {table.columns.length}
           </span>
         </div>
@@ -82,7 +86,7 @@ export const TableNode = memo(function TableNode({
               e.stopPropagation();
               addColumn(table.id);
             }}
-            className="p-1 rounded hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+            className="p-1 rounded hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
           >
             <svg
               className="w-3.5 h-3.5"
@@ -111,7 +115,7 @@ export const TableNode = memo(function TableNode({
                 deleteTable(table.id);
               }
             }}
-            className="p-1 rounded hover:bg-rose-950/60 text-slate-400 hover:text-rose-400 transition-colors"
+            className="p-1 rounded hover:bg-red-950/50 text-zinc-400 hover:text-red-400 transition-colors"
           >
             <svg
               className="w-3.5 h-3.5"
@@ -131,7 +135,7 @@ export const TableNode = memo(function TableNode({
       </div>
 
       {/* Columns List */}
-      <div className="divide-y divide-slate-800/60 py-1 max-h-[360px] overflow-y-auto">
+      <div className="divide-y divide-zinc-850 py-0.5 max-h-[360px] overflow-y-auto">
         {table.columns.map((col: Column) => {
           const isColSelected =
             selectedTableId === table.id && selectedColumnId === col.id;
@@ -147,8 +151,8 @@ export const TableNode = memo(function TableNode({
               }}
               className={`group relative px-3 py-1.5 flex items-center justify-between transition-colors cursor-pointer ${
                 isColSelected
-                  ? 'bg-indigo-950/70 text-white'
-                  : 'hover:bg-slate-800/50 text-slate-200'
+                  ? 'bg-zinc-800 text-white'
+                  : 'hover:bg-zinc-800/50 text-zinc-200'
               }`}
             >
               {/* React Flow Left Handle (Target) */}
@@ -156,7 +160,7 @@ export const TableNode = memo(function TableNode({
                 type="target"
                 position={Position.Left}
                 id={col.id}
-                className="!w-2.5 !h-2.5 !bg-indigo-400 !border-2 !border-slate-900 group-hover:!scale-125 !transition-transform !-left-1.5"
+                className="!w-2 !h-2 !bg-zinc-400 !border-2 !border-zinc-950 group-hover:!bg-blue-400 group-hover:!scale-125 !transition-transform !-left-1"
                 title={`Target handle for ${table.name}.${col.name}`}
               />
 
@@ -164,41 +168,41 @@ export const TableNode = memo(function TableNode({
               <div className="flex items-center gap-1.5 min-w-0 pr-1">
                 {col.primaryKey ? (
                   <span
-                    className="text-[9px] px-1 py-0.2 rounded font-mono font-bold bg-amber-950 text-amber-300 border border-amber-700/60 shrink-0"
+                    className="text-[9px] px-1 py-0.2 rounded font-mono font-bold bg-zinc-800 text-amber-300 border border-zinc-700 shrink-0"
                     title="Primary Key"
                   >
                     PK
                   </span>
                 ) : isOutboundFk ? (
                   <span
-                    className="text-[9px] px-1 py-0.2 rounded font-mono font-bold bg-indigo-950 text-indigo-300 border border-indigo-700/60 shrink-0"
+                    className="text-[9px] px-1 py-0.2 rounded font-mono font-bold bg-zinc-800 text-blue-300 border border-zinc-700 shrink-0"
                     title="Foreign Key (references another table)"
                   >
                     FK
                   </span>
                 ) : isInboundTarget ? (
                   <span
-                    className="text-[9px] px-1 py-0.2 rounded font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-700/60 shrink-0"
+                    className="text-[9px] px-1 py-0.2 rounded font-mono font-bold bg-zinc-800 text-emerald-300 border border-zinc-700 shrink-0"
                     title="Referenced by Foreign Key"
                   >
                     REF
                   </span>
                 ) : col.unique ? (
                   <span
-                    className="text-[9px] px-1 py-0.2 rounded font-mono font-semibold bg-emerald-950 text-emerald-300 border border-emerald-800/50 shrink-0"
+                    className="text-[9px] px-1 py-0.2 rounded font-mono font-semibold bg-zinc-800 text-zinc-300 border border-zinc-700 shrink-0"
                     title="Unique"
                   >
                     UQ
                   </span>
                 ) : (
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-700 shrink-0 ml-1" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-zinc-700 shrink-0 ml-1" />
                 )}
 
                 <span
                   className={`font-mono text-xs truncate ${
                     col.primaryKey
-                      ? 'text-amber-200 font-semibold'
-                      : 'text-slate-200'
+                      ? 'text-zinc-100 font-semibold'
+                      : 'text-zinc-300'
                   }`}
                   title={col.name}
                 >
@@ -207,8 +211,8 @@ export const TableNode = memo(function TableNode({
               </div>
 
               {/* Column Type & Modifiers */}
-              <div className="flex items-center gap-1 shrink-0 text-[10px] font-mono text-slate-400">
-                <span className="text-indigo-300 text-[10px]">
+              <div className="flex items-center gap-1 shrink-0 text-[10px] font-mono text-zinc-400">
+                <span className="text-zinc-400 text-[10px]">
                   {col.type}
                   {col.length ? `(${col.length})` : ''}
                   {col.precision ? `(${col.precision},${col.scale ?? 0})` : ''}
@@ -216,7 +220,7 @@ export const TableNode = memo(function TableNode({
 
                 {!col.nullable && (
                   <span
-                    className="text-[8px] text-slate-400 px-1 py-0.2 rounded bg-slate-800 border border-slate-700"
+                    className="text-[8px] text-zinc-400 px-1 py-0.2 rounded bg-zinc-800 border border-zinc-700"
                     title="NOT NULL"
                   >
                     NN
@@ -225,7 +229,7 @@ export const TableNode = memo(function TableNode({
 
                 {col.autoIncrement && (
                   <span
-                    className="text-[8px] text-amber-400 px-1 py-0.2 rounded bg-amber-950/80 border border-amber-800"
+                    className="text-[8px] text-amber-400 px-1 py-0.2 rounded bg-zinc-800 border border-zinc-700"
                     title="Auto Increment"
                   >
                     AI
@@ -241,7 +245,7 @@ export const TableNode = memo(function TableNode({
                       e.stopPropagation();
                       deleteColumn(table.id, col.id);
                     }}
-                    className="opacity-0 group-hover:opacity-100 ml-1 text-slate-500 hover:text-rose-400 transition-opacity"
+                    className="opacity-0 group-hover:opacity-100 ml-1 text-zinc-500 hover:text-red-400 transition-opacity"
                   >
                     ×
                   </button>
@@ -253,7 +257,7 @@ export const TableNode = memo(function TableNode({
                 type="source"
                 position={Position.Right}
                 id={col.id}
-                className="!w-2.5 !h-2.5 !bg-indigo-400 !border-2 !border-slate-900 group-hover:!scale-125 !transition-transform !-right-1.5"
+                className="!w-2 !h-2 !bg-zinc-400 !border-2 !border-zinc-950 group-hover:!bg-blue-400 group-hover:!scale-125 !transition-transform !-right-1"
                 title={`Source handle for ${table.name}.${col.name}`}
               />
             </div>

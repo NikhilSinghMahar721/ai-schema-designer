@@ -64,18 +64,20 @@ export function SaveDialog({ isOpen, onClose }: SaveDialogProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-md rounded-2xl bg-slate-900 border border-slate-800 p-6 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-5">
+        <div className="flex items-center justify-between pb-4 border-b border-zinc-800 mb-5">
           <div className="flex items-center gap-2.5">
-            <span className="text-xl">💾</span>
+            <svg className="w-5 h-5 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+            </svg>
             <h2 className="text-base font-bold text-white">Save Schema to Cloud</h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-white text-lg p-1 transition-colors"
+            className="text-zinc-400 hover:text-white text-base p-1 transition-colors"
           >
             ✕
           </button>
@@ -84,7 +86,7 @@ export function SaveDialog({ isOpen, onClose }: SaveDialogProps) {
         {/* Guest View: prompt login/register */}
         {!user ? (
           <div className="space-y-4">
-            <div className="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs leading-relaxed">
+            <div className="p-4 rounded-lg bg-zinc-950 border border-zinc-800 text-zinc-300 text-xs leading-relaxed">
               <p className="font-semibold text-white mb-1">
                 Cloud save requires an account
               </p>
@@ -95,13 +97,13 @@ export function SaveDialog({ isOpen, onClose }: SaveDialogProps) {
             <div className="flex flex-col gap-2 pt-2">
               <Link
                 href="/login"
-                className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs text-center transition-colors shadow-md shadow-indigo-600/25"
+                className="w-full py-2.5 px-4 rounded-md bg-white hover:bg-zinc-200 text-zinc-950 font-medium text-xs text-center transition-colors shadow-sm"
               >
                 Sign In to Save
               </Link>
               <Link
                 href="/register"
-                className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-xs text-center border border-slate-700 transition-colors"
+                className="w-full py-2.5 px-4 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-medium text-xs text-center border border-zinc-700 transition-colors"
               >
                 Create Free Account
               </Link>
@@ -111,9 +113,9 @@ export function SaveDialog({ isOpen, onClose }: SaveDialogProps) {
                   exportJson();
                   onClose();
                 }}
-                className="mt-1 text-slate-400 hover:text-slate-300 text-xs py-1 transition-colors cursor-pointer"
+                className="mt-1 text-zinc-400 hover:text-zinc-200 text-xs py-1 transition-colors cursor-pointer text-center"
               >
-                Or download as a local .json file (guests)
+                Or download as a local .json file
               </button>
             </div>
           </div>
@@ -121,13 +123,13 @@ export function SaveDialog({ isOpen, onClose }: SaveDialogProps) {
           /* Authenticated View: name input & save */
           <form onSubmit={handleSave} className="space-y-4">
             {error && (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs">
+              <div className="p-3 rounded-md bg-rose-950/40 border border-rose-900/60 text-rose-300 text-xs">
                 {error}
               </div>
             )}
 
             {successMessage && (
-              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium">
+              <div className="p-3 rounded-md bg-emerald-950/40 border border-emerald-900/60 text-emerald-300 text-xs font-medium">
                 {successMessage}
               </div>
             )}
@@ -135,7 +137,7 @@ export function SaveDialog({ isOpen, onClose }: SaveDialogProps) {
             <div>
               <label
                 htmlFor="saved-schema-name"
-                className="block text-xs font-medium text-slate-300 mb-1"
+                className="block text-xs font-medium text-zinc-300 mb-1"
               >
                 Schema Name
               </label>
@@ -147,11 +149,11 @@ export function SaveDialog({ isOpen, onClose }: SaveDialogProps) {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. E-Commerce Core v1"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
+                className="w-full px-3.5 py-2.5 rounded-md bg-zinc-950 border border-zinc-800 text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-zinc-500 transition-colors"
               />
             </div>
 
-            <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+            <div className="p-3 rounded-lg bg-zinc-950 border border-zinc-800 flex items-center justify-between text-xs text-zinc-400 font-mono">
               <span>
                 Tables: <strong className="text-white">{schema.tables.length}</strong>
               </span>
@@ -160,7 +162,7 @@ export function SaveDialog({ isOpen, onClose }: SaveDialogProps) {
               </span>
               <span>
                 Dialect:{' '}
-                <strong className="text-emerald-400 uppercase font-mono">
+                <strong className="text-zinc-200 uppercase">
                   {dialect}
                 </strong>
               </span>
@@ -170,14 +172,14 @@ export function SaveDialog({ isOpen, onClose }: SaveDialogProps) {
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 rounded-xl text-xs text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+                className="px-4 py-2 rounded-md text-xs text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isSaving}
-                className="px-5 py-2.5 rounded-xl text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition-colors shadow-lg shadow-indigo-600/30 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                className="px-5 py-2.5 rounded-md text-xs bg-white hover:bg-zinc-200 text-zinc-950 font-medium transition-colors shadow-sm disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
               >
                 {isSaving ? 'Saving...' : 'Save Schema'}
               </button>

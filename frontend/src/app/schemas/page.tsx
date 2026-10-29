@@ -15,7 +15,7 @@ export default function SchemasPage() {
     fetchCurrentUser();
   }, [fetchCurrentUser]);
 
-  // Guest redirection (T11.6: UI convenience; backend is the true authority)
+  // Guest redirection (UI convenience; backend is the true authority)
   useEffect(() => {
     if (!isInitialLoading && !user) {
       router.push('/login');
@@ -24,9 +24,9 @@ export default function SchemasPage() {
 
   if (isInitialLoading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="flex items-center gap-3 text-slate-400 text-xs">
-          <svg className="animate-spin h-5 w-5 text-indigo-500" viewBox="0 0 24 24">
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <div className="flex items-center gap-3 text-zinc-400 text-xs">
+          <svg className="animate-spin h-4 w-4 text-zinc-200" viewBox="0 0 24 24">
             <circle
               className="opacity-25"
               cx="12"
@@ -53,23 +53,31 @@ export default function SchemasPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col">
+    <div className="min-h-screen bg-zinc-950 flex flex-col">
       {/* Top Header */}
-      <header className="h-14 border-b border-slate-800 bg-slate-900/90 px-6 flex items-center justify-between shrink-0">
+      <header className="h-14 border-b border-zinc-800 bg-zinc-900/90 px-6 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-4">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-tr from-indigo-600 to-emerald-400 flex items-center justify-center text-white font-bold text-sm shadow-md shadow-indigo-500/20">
-              ⚡
+            <div className="h-7 w-7 rounded bg-zinc-800 border border-zinc-700 flex items-center justify-center text-white font-mono font-bold text-xs">
+              DB
             </div>
-            <span className="font-bold text-sm tracking-tight text-white">
-              AI Schema Designer
+            <span className="font-semibold text-sm tracking-tight text-white font-mono">
+              DB Architect
             </span>
           </Link>
-          <span className="text-slate-600">/</span>
-          <span className="text-xs text-slate-300 font-medium">My Schemas</span>
+          <span className="text-zinc-600">/</span>
+          <span className="text-xs text-zinc-400 font-medium font-mono">My Schemas</span>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/designer"
+            className="px-3 py-1.5 rounded-md bg-white hover:bg-zinc-200 text-zinc-950 font-medium text-xs flex items-center gap-1.5 transition-colors shadow-sm"
+          >
+            <span>Open Studio</span>
+            <span>→</span>
+          </Link>
+          <div className="h-4 w-px bg-zinc-800 mx-0.5" />
           <UserMenu />
         </div>
       </header>

@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useSchemaStore } from '@/features/designer/store/schema.store';
+import { useSchemaStore, type SchemaStoreState } from '@/features/designer/store/schema.store';
 import type { Schema } from '@/features/designer/types';
 
 const baseSchema: Schema = {
@@ -36,7 +36,7 @@ describe('schema store', () => {
       selectedRelationshipId: null,
       past: [],
       future: [],
-    } as any);
+    } as Partial<SchemaStoreState>);
   });
 
   it('addTable creates a table with a primary key column', () => {
@@ -96,7 +96,7 @@ describe('schema store', () => {
   });
 
   it('updateColumn updates column properties', () => {
-    const { addTable, addColumn, updateColumn } = useSchemaStore.getState();
+    const { addTable, updateColumn } = useSchemaStore.getState();
     const tId = addTable('items');
     const cId = useSchemaStore.getState().schema.tables[0].columns[0].id;
     updateColumn(tId, cId, { nullable: true, unique: true });

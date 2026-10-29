@@ -11,6 +11,7 @@ import type {
   Table,
   Column,
   Relationship,
+  OnDeleteAction,
   Dialect,
 } from '../types';
 import { api, ApiClientError } from '../../../lib/api';
@@ -275,7 +276,7 @@ export interface SchemaStoreState {
 
   // Relationship CRUD Actions (T6.6)
   addRelationship: (
-    rel: Omit<Relationship, 'id'> & { id?: string },
+    rel: Omit<Relationship, 'id' | 'onDelete'> & { id?: string; onDelete?: OnDeleteAction },
   ) => string | null;
   updateRelationship: (relId: string, updates: Partial<Relationship>) => void;
   deleteRelationship: (relId: string) => void;

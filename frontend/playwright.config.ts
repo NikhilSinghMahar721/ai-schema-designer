@@ -1,12 +1,13 @@
-/** @type {import('@playwright/test').PlaywrightTestConfig} */
-const config = {
+import { defineConfig, devices } from '@playwright/test';
+
+export default defineConfig({
   testDir: './tests/e2e',
   timeout: 30000,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: [['list'], ['dot', {outputMode: 'summary'}]],
+  reporter: [['list'], ['dot', { outputMode: 'summary' }]],
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'retain-on-failure',
@@ -16,17 +17,15 @@ const config = {
   projects: [
     {
       name: 'Chromium',
-      use: { ...config.use, browser: 'chromium' },
+      use: { ...devices['Desktop Chrome'] },
     },
     {
       name: 'Firefox',
-      use: { ...config.use, browser: 'firefox' },
+      use: { ...devices['Desktop Firefox'] },
     },
     {
       name: 'WebKit',
-      use: { ...config.use, browser: 'webkit' },
+      use: { ...devices['Desktop Safari'] },
     },
   ],
-};
-
-export default config;
+});

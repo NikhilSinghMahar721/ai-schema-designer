@@ -21,7 +21,7 @@ export function LoadingSkeleton({
 }: LoadingSkeletonProps) {
   return (
     <div
-      className={`animate-pulse rounded-md bg-slate-800/60 ${className}`}
+      className={`animate-pulse rounded-md bg-zinc-800/60 ${className}`}
       style={{ width, height }}
     />
   );

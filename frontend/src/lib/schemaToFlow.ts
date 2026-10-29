@@ -118,7 +118,7 @@ export function schemaToFlow(
   const edges: Edge[] = schema.relationships.map((rel) => {
     const edgeColor =
       rel.onDelete === 'CASCADE'
-        ? '#6366f1' // indigo
+        ? '#3b82f6' // precision blue
         : rel.onDelete === 'SET NULL'
         ? '#10b981' // emerald
         : '#f59e0b'; // amber
@@ -133,12 +133,12 @@ export function schemaToFlow(
       animated: false,
       style: {
         stroke: edgeColor,
-        strokeWidth: 2,
+        strokeWidth: 1.5,
       },
       markerEnd: {
         type: MarkerType.ArrowClosed,
-        width: 14,
-        height: 14,
+        width: 12,
+        height: 12,
         color: edgeColor,
       },
       data: {
@@ -151,15 +151,15 @@ export function schemaToFlow(
       },
       label: rel.onDelete,
       labelStyle: {
-        fill: '#94a3b8',
+        fill: '#a1a1aa',
         fontSize: 10,
         fontWeight: 600,
         fontFamily: 'monospace',
       },
       labelBgStyle: {
-        fill: '#0f172a',
-        fillOpacity: 0.9,
-        stroke: edgeColor,
+        fill: '#18181b',
+        fillOpacity: 0.95,
+        stroke: '#27272a',
         strokeWidth: 1,
         rx: 4,
         ry: 4,

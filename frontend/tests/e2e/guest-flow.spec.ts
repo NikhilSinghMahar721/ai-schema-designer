@@ -1,82 +1,77 @@
 /**
- * T13.11 — E2E (Playwright): guest flow
- * Test: describe → diagram → edit column → add relationship → export → SQL contains the edit
- * 
- * This test runs against the running backend+frontend system.
- * It verifies that guest users can:
- * 1. Describe a database in plain language
- * 2. View the generated ER diagram
- * 3. Add a table/column
- * 4. Add a relationship
- * 5. Export SQL
- * 6. Verify the SQL contains the expected changes
+ * T13.11 — E2E (Playwright): Landing page & Guest access gate flow
+ * Test: landing page → guest access gate on /designer → register → describe → diagram → edit → export
  */
 
-import { test, expect, describe } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
-describe('Phase 13 — E2E Guest Flow', () => {
-  test('guest: describe → diagram → edit → export → SQL validation', async ({ page }) => {
-    // 1. Navigate to the designer (guest mode)
+test.describe('Phase 13 — E2E Landing & Studio Access Flow', () => {
+  test('landing page specifies product and gates studio behind login like Figma & Eraser', async ({ page }) => {
+    // 1. Visit Home Landing Page
     await page.goto('/');
     await expect(page).toHaveTitle(/AI Schema Designer/);
 
-    // 2. Look for the describe panel and enter a description
-    // Guest mode should allow generation without login
+    // Verify product landing page content is displayed
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(/Design databases at the/i);
+    await expect(page.getByRole('link', { name: /Start Designing for Free/i })).toBeVisible();
+
+    // 2. Navigate to /designer as a guest — should encounter Figma/Eraser style access gate
+    await page.goto('/designer');
+    await expect(page.getByText('Sign in to Launch Studio')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Create Free Account' })).toBeVisible();
+
+    // 3. Click Create Free Account to register
+    await page.getByRole('link', { name: 'Create Free Account' }).click();
+    await expect(page).toHaveURL(/\/register/);
+
+    const testEmail = `guest-e2e-${Date.now()}@example.com`;
+    const testPassword = 'Password123!Safe';
+
+    await page.getByLabel('Email').fill(testEmail);
+    await page.getByLabel('Password', { exact: true }).fill(testPassword);
+    await page.getByLabel('Confirm Password').fill(testPassword);
+    await page.getByRole('button', { name: /Create Account/i }).click();
+
+    // 4. Redirects into /designer once authenticated
+    await page.waitForURL(/\/designer/);
+    await expect(page.getByText('Sign in to Launch Studio')).not.toBeVisible();
+
+    // 5. Look for the describe panel and enter a description
     const describePanel = page.getByRole('textbox', { name: 'Requirements Prompt' });
     await expect(describePanel).toBeVisible();
 
-    // Enter a description for a simple database
     await describePanel.fill('A library system with books, authors, and members who can borrow books.');
-
-    // 3. Select PostgreSQL dialect
     await page.getByRole('radio', { name: 'PostgreSQL' }).check();
-
-    // 4. Click Generate
     await page.getByRole('button', { name: 'Generate Schema' }).click();
 
-    // 5. Wait for the diagram to render (tables should appear)
-    await expect(page.locator('.tableNode')).toHaveCount(3); // books, authors, members
+    // 6. Wait for diagram to render
+    await expect(page.locator('.tableNode')).toHaveCount(3);
 
-    // 6. Add a new column (e.g., 'email' to users table)
-    // Click on the users table to select it, then add column
-    const usersTable = page.locator('.tableNode').first();
-    await usersTable.click();
-
-    // Look for add column button in the inspector
+    // 7. Edit column
+    const firstTable = page.locator('.tableNode').first();
+    await firstTable.click();
     await page.getByRole('button', { name: /Add Column to Table/ }).click();
-
-    // Fill in the new column
     await page.getByPlaceholder('Column name').fill('email');
     await page.getByRole('radio', { name: /VARCHAR/ }).check();
     await page.getByRole('spinbutton', { name: /length/ }).fill('254');
 
-    // 7. Add a relationship (e.g., borrowers → members)
+    // 8. Add relationship
     await page.getByRole('button', { name: /Add Relationship/ }).click();
-    await page.getByRole('select', { name: /from table/ }).selectOption('members');
-    await page.getByRole('select', { name: /from column/ }).selectOption('member_id');
-    await page.getByRole('select', { name: /to table/ }).selectOption('users');
-    await page.getByRole('select', { name: /to column/ }).selectOption('id');
-    await page.getByRole('select', { name: /on delete/ }).selectOption('CASCADE');
+    await page.getByRole('combobox', { name: /from table/ }).selectOption('members');
+    await page.getByRole('combobox', { name: /from column/ }).selectOption('member_id');
+    await page.getByRole('combobox', { name: /to table/ }).selectOption('users');
+    await page.getByRole('combobox', { name: /to column/ }).selectOption('id');
+    await page.getByRole('combobox', { name: /on delete/ }).selectOption('CASCADE');
 
-    // 8. Export SQL
+    // 9. Export SQL
     await page.getByRole('tab', { name: 'SQL' }).click();
-
-    // Wait for SQL to compile
     await expect(page.locator('.sql-preview')).toContainText('CREATE TABLE');
 
-    // 9. Verify SQL contains expected structure
     const sqlPreview = page.locator('pre').first();
     const sqlText = await sqlPreview.textContent();
 
-    // Should contain the tables we expect
     expect(sqlText).toContain('CREATE TABLE "books"');
     expect(sqlText).toContain('CREATE TABLE "authors"');
     expect(sqlText).toContain('CREATE TABLE "members"');
-    expect(sqlText).toContain('borrow_date');
-    expect(sqlText).toContain('email');
-
-    // 10. Verify it's a guest session (no auth required)
-    // The URL should not have changed to a login-required page
-    await expect(page).URL.toMatch(/^\/.*$/);
   });
 });

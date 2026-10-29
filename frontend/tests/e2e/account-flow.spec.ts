@@ -15,15 +15,15 @@
  * 8. Delete the account
  */
 
-import { test, expect, describe, beforeEach } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
-let registeredEmail = '';
-let registeredPassword = 'TestPassword123!';
+// registered password for tests
+const registeredPassword = 'TestPassword123!';
 
-describe('Phase 13 — E2E Account Flow', () => {
-  beforeEach(async ({ page }) => {
+test.describe('Phase 13 — E2E Account Flow', () => {
+  test.beforeEach(async ({ page }) => {
     // Ensure clean state
-    await page.goto('/');
+    await page.goto('/designer');
   });
 
   test('account: register → generate → save → logout → login → open schemas → delete → delete account', async ({
@@ -35,8 +35,9 @@ describe('Phase 13 — E2E Account Flow', () => {
 
     const registerEmail = `e2e-test-${Date.now()}@example.com`;
     await page.getByLabel('Email').fill(registerEmail);
-    await page.getByLabel('Password').fill(registeredPassword);
-    await page.getByRole('button', { name: /Register/ }).click();
+    await page.getByLabel('Password', { exact: true }).fill(registeredPassword);
+    await page.getByLabel('Confirm Password').fill(registeredPassword);
+    await page.getByRole('button', { name: /Create Account/i }).click();
 
     // Wait for redirect/login to complete
     await page.waitForLoadState('networkidle');
@@ -45,7 +46,7 @@ describe('Phase 13 — E2E Account Flow', () => {
     await expect(page.getByRole('button', { name: /Sign Out/ })).toBeVisible();
 
     // 2. Generate a schema from description
-    await page.goto('/');
+    await page.goto('/designer');
     await expect(page.locator('.tableNode')).toHaveCount(0); // fresh start
 
     const describePanel = page.getByRole('textbox', { name: 'Requirements Prompt' });
@@ -79,7 +80,8 @@ describe('Phase 13 — E2E Account Flow', () => {
     // 5. Log back in
     await page.goto('/login');
     await page.getByLabel('Email').fill(registerEmail);
-    await page.getByLabel('Password').fill(registeredPassword);
+    await page.getByLabel('Password', { exact: true }).fill(registeredPassword);
+    await page.getByLabel('Confirm Password').fill(registeredPassword);
     await page.getByRole('button', { name: /Log In/ }).click();
     await page.waitForLoadState('networkidle');
 
