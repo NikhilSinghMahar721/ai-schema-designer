@@ -97,6 +97,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
         return 'VALIDATION_ERROR';
       case 401:
         return 'UNAUTHORIZED';
+      case 403:
+        return 'FORBIDDEN';
       case 404:
         return 'NOT_FOUND';
       case 408:
