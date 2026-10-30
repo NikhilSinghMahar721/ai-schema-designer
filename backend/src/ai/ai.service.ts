@@ -155,7 +155,8 @@ export class AiService implements AiClient {
           continue;
         }
 
-        const msg = error instanceof Error ? error.message : 'Unknown AI error';
+        const causeStr = (error as { cause?: Error })?.cause?.message ? ` (${(error as { cause: Error }).cause.message})` : '';
+        const msg = error instanceof Error ? `${error.message}${causeStr}` : 'Unknown AI error';
         this.logger.warn(`Model ${modelName} provider error: ${msg}. Attempting fallback model...`);
       }
     }
