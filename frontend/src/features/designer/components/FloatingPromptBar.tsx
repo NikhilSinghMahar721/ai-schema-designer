@@ -61,7 +61,8 @@ export function FloatingPromptBar({
         setPrompt('');
         onShowToast('Relational schema synthesized!');
       } else {
-        setLocalError('Failed to generate schema. Please verify your prompt.');
+        const storeError = useSchemaStore.getState().error;
+        setLocalError(storeError || 'Failed to generate schema. Please verify your prompt.');
       }
     }
   };
@@ -164,3 +165,4 @@ export function FloatingPromptBar({
     </div>
   );
 }
+

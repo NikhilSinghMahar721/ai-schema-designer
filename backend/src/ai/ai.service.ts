@@ -101,64 +101,72 @@ export class AiService implements AiClient {
   }
 
   /**
-   * Single call to the AI provider with a timeout.
+   * Single call to the AI provider with a timeout and automatic model fallback.
    * Maps provider errors to safe HTTP exceptions.
    */
   private async callModel(
     systemInstruction: string,
     userMessage: string,
   ): Promise<string> {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
+    const candidateModels = Array.from(
+      new Set([this.model, 'gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-2.5-flash']),
+    );
 
+    let lastError: unknown;
+
+    for (const modelName of candidateModels) {
       try {
-        const response = await this.ai.models.generateContent({
-          model: this.model,
-          contents: userMessage,
-          config: {
-            systemInstruction,
-            temperature: 0.3,
-          },
-          // @ts-expect-error -- AbortSignal support may vary by SDK version
-          signal: controller.signal,
-        });
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
 
-        const text = response.text;
-        if (!text || text.trim().length === 0) {
-          throw new BadGatewayException('AI returned an empty response');
+        try {
+          const response = await this.ai.models.generateContent({
+            model: modelName,
+            contents: userMessage,
+            config: {
+              systemInstruction,
+              temperature: 0.2,
+              responseMimeType: 'application/json',
+            },
+            // @ts-expect-error -- AbortSignal support may vary by SDK version
+            signal: controller.signal,
+          });
+
+          const text = response.text;
+          if (!text || text.trim().length === 0) {
+            throw new BadGatewayException('AI returned an empty response');
+          }
+
+          return text;
+        } finally {
+          clearTimeout(timeout);
+        }
+      } catch (error: unknown) {
+        lastError = error;
+
+        // Re-throw our own HTTP exceptions if it was empty response
+        if (error instanceof BadGatewayException && error.message.includes('empty response')) {
+          this.logger.warn(`Model ${modelName} returned empty response, trying fallback...`);
+          continue;
         }
 
-        return text;
-      } finally {
-        clearTimeout(timeout);
-      }
-    } catch (error: unknown) {
-      // Re-throw our own HTTP exceptions
-      if (
-        error instanceof UnprocessableEntityException ||
-        error instanceof BadGatewayException ||
-        error instanceof RequestTimeoutException ||
-        error instanceof BadRequestException
-      ) {
-        throw error;
-      }
+        if (error instanceof Error && error.name === 'AbortError') {
+          this.logger.warn(`Model ${modelName} timed out after ${AI_TIMEOUT_MS}ms, trying fallback...`);
+          continue;
+        }
 
-      // Abort = timeout
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new RequestTimeoutException(
-          'AI request timed out. Please try again.',
-        );
+        const msg = error instanceof Error ? error.message : 'Unknown AI error';
+        this.logger.warn(`Model ${modelName} provider error: ${msg}. Attempting fallback model...`);
       }
-
-      // Log safely (never log the full prompt or API key)
-      const message = error instanceof Error ? error.message : 'Unknown AI error';
-      this.logger.error(`AI provider error: ${message}`);
-
-      throw new BadGatewayException(
-        'AI service is temporarily unavailable. Please try again later.',
-      );
     }
+
+    // All candidate models failed
+    const message = lastError instanceof Error ? lastError.message : 'Unknown AI error';
+    this.logger.error(`All AI candidate models failed. Last error: ${message}`);
+
+    throw new BadGatewayException(
+      'AI service is temporarily unavailable. Please try again later.',
+    );
   }
 
   /**

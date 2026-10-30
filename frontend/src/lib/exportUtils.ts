@@ -58,3 +58,4 @@ export function downloadJsonFile(schema: Schema, schemaName?: string): void {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+

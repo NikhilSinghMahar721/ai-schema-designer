@@ -301,3 +301,4 @@ export function generateSql(schema: Schema, dialect: Dialect): string {
 
   return statements.join('\n\n') + '\n';
 }
+

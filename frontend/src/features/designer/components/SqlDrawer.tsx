@@ -142,3 +142,4 @@ export function SqlDrawer({ isOpen, onClose, onShowToast }: SqlDrawerProps) {
     </div>
   );
 }
+
