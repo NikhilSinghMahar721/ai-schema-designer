@@ -1,39 +1,74 @@
 'use client';
 
 /**
- * Main Designer Studio Page (authenticated workspace).
- * Three-column layout:
- * 1. Describe panel (left)
- * 2. Diagram canvas (center)
- * 3. SQL preview (right)
- * 
- * Unauthenticated visitors see a focused access gate prompting login or registration.
+ * Main Designer Studio Page.
+ * Full-screen interactive ER diagram workspace (Eraser / Figma style)
+ * with unified top navbar, three-dots actions & export menu,
+ * docked floating AI prompt bar, slide-over SQL drawer,
+ * and contextual floating inspector.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { DescribePanel } from '../../features/designer/components/DescribePanel';
 import { DiagramCanvas } from '../../features/designer/components/DiagramCanvas';
-import { SqlPreview } from '../../features/designer/components/SqlPreview';
+import { FloatingPromptBar } from '../../features/designer/components/FloatingPromptBar';
+import { SqlDrawer } from '../../features/designer/components/SqlDrawer';
+import { ActionsMenu } from '../../features/designer/components/ActionsMenu';
 import { UserMenu } from '../../features/auth/components/UserMenu';
 import { SaveDialog } from '../../features/saved-schemas/components/SaveDialog';
 import { useAuthStore } from '../../features/auth/store/auth.store';
+import { useSchemaStore } from '../../features/designer/store/schema.store';
 import { useIsMounted } from '../../lib/useIsMounted';
 
-type MobileTab = 'describe' | 'diagram' | 'sql';
-
 export default function DesignerPage() {
-  const [mobileTab, setMobileTab] = useState<MobileTab>('diagram');
   const [isSaveOpen, setIsSaveOpen] = useState(false);
+  const [isSqlDrawerOpen, setIsSqlDrawerOpen] = useState(false);
+  const [isPromptOpen, setIsPromptOpen] = useState(false);
+  const [isInspectorOpen, setIsInspectorOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   const mounted = useIsMounted();
   const { user, isInitialLoading, fetchCurrentUser } = useAuthStore();
+  const {
+    schema,
+    validationErrors,
+    addTable,
+    recalculateAutoLayout,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+  } = useSchemaStore();
 
   useEffect(() => {
     fetchCurrentUser();
   }, [fetchCurrentUser]);
 
+  const showToast = useCallback((msg: string) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToastMessage(msg);
+    toastTimerRef.current = setTimeout(() => {
+      setToastMessage(null);
+    }, 2800);
+  }, []);
+
+  const totalTables = schema.tables.length;
+  const totalColumns = schema.tables.reduce((acc, t) => acc + t.columns.length, 0);
+  const totalRelationships = schema.relationships.length;
+  const hasErrors = validationErrors.length > 0;
+
   return (
     <div className="relative flex flex-col h-screen w-screen overflow-hidden bg-zinc-950 text-zinc-100">
+      {/* Toast Feedback Notification */}
+      {toastMessage && (
+        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 bg-zinc-900/95 border border-zinc-700/90 text-zinc-100 text-xs px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-150 backdrop-blur-md">
+          <span className="w-2 h-2 rounded-full bg-emerald-400" />
+          <span className="font-medium">{toastMessage}</span>
+        </div>
+      )}
+
       {/* Unauthenticated Access Gate */}
       {mounted && !isInitialLoading && !user && (
         <div className="absolute inset-0 bg-zinc-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -84,121 +119,217 @@ export default function DesignerPage() {
         </div>
       )}
 
-      {/* Top Navbar */}
-      <header className="h-12 border-b border-zinc-800 bg-zinc-900 px-4 flex items-center justify-between shrink-0 z-10">
-        <div className="flex items-center gap-3">
+      {/* Unified Top Navigation & Controls Toolbar */}
+      <header className="h-13 border-b border-zinc-800 bg-zinc-900/95 backdrop-blur-md px-3 sm:px-4 flex items-center justify-between shrink-0 z-20">
+        {/* Left Side: Brand & Canvas Creation Tools */}
+        <div className="flex items-center gap-2 sm:gap-3">
           <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
             <div className="h-6 w-6 rounded bg-white text-zinc-950 flex items-center justify-center font-bold text-[11px] tracking-tighter">
               DB
             </div>
-            <span className="font-semibold text-sm tracking-tight text-white">
+            <span className="font-semibold text-sm tracking-tight text-white hidden sm:inline">
               AI Schema Designer
             </span>
           </Link>
-          <span className="text-zinc-600 hidden sm:inline">/</span>
-          <span className="text-[11px] text-zinc-400 font-mono hidden sm:inline-block">
+          <span className="text-zinc-600 hidden md:inline">/</span>
+          <span className="text-[11px] text-zinc-400 font-mono hidden md:inline-block">
             workspace
           </span>
+
+          <div className="h-4 w-px bg-zinc-800 mx-1 hidden sm:block" />
+
+          {/* Add Table */}
+          <button
+            type="button"
+            onClick={() => {
+              addTable();
+              setIsInspectorOpen(true);
+            }}
+            className="py-1.5 px-2.5 sm:px-3 rounded-lg bg-white hover:bg-zinc-200 text-zinc-950 font-semibold text-xs flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+            </svg>
+            <span className="hidden sm:inline">Add Table</span>
+          </button>
+
+          {/* Auto Layout */}
+          <button
+            type="button"
+            onClick={recalculateAutoLayout}
+            title="Auto-organize table positions"
+            className="py-1.5 px-2.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300 border border-zinc-700/80 text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <svg className="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+            </svg>
+            <span className="hidden lg:inline">Auto Layout</span>
+          </button>
+
+          {/* Undo / Redo */}
+          <div className="flex items-center bg-zinc-800/80 rounded-lg border border-zinc-700/80 p-0.5">
+            <button
+              type="button"
+              disabled={!canUndo()}
+              onClick={undo}
+              title="Undo (Ctrl+Z)"
+              className="p-1 rounded text-zinc-400 hover:text-white disabled:opacity-30 disabled:hover:text-zinc-400 transition-colors cursor-pointer"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              disabled={!canRedo()}
+              onClick={redo}
+              title="Redo (Ctrl+Y)"
+              className="p-1 rounded text-zinc-400 hover:text-white disabled:opacity-30 disabled:hover:text-zinc-400 transition-colors cursor-pointer"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10h-10a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Counts Badge */}
+          <div className="hidden xl:flex items-center gap-1.5 text-xs">
+            <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700/70 font-mono text-[11px]">
+              {totalTables} {totalTables === 1 ? 'Table' : 'Tables'}
+            </span>
+            <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700/70 font-mono text-[11px]">
+              {totalColumns} Cols
+            </span>
+            <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700/70 font-mono text-[11px]">
+              {totalRelationships} Relations
+            </span>
+          </div>
         </div>
 
-        {/* Mobile Tab Switcher */}
-        <div className="flex md:hidden items-center bg-zinc-950 p-0.5 rounded-lg border border-zinc-800 text-xs">
+        {/* Right Side: AI Prompt, Inspector, Save, Three Dots Menu & User Menu */}
+        <div className="flex items-center gap-2 sm:gap-2.5 text-xs">
+          {/* Validation Status */}
           <button
             type="button"
-            onClick={() => setMobileTab('describe')}
-            className={`px-3 py-1 rounded text-xs font-medium ${
-              mobileTab === 'describe'
-                ? 'bg-zinc-800 text-white font-semibold'
-                : 'text-zinc-400'
+            onClick={() => setIsInspectorOpen(true)}
+            title="Click to inspect validation errors"
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-mono font-medium border flex items-center gap-1.5 transition-colors cursor-pointer ${
+              hasErrors
+                ? 'bg-amber-950/40 text-amber-300 border-amber-800/80 hover:bg-amber-950/60'
+                : 'bg-zinc-800/80 text-zinc-300 border-zinc-700/80 hover:bg-zinc-800'
             }`}
           >
-            Prompt
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                hasErrors ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'
+              }`}
+            />
+            <span className="hidden sm:inline">
+              {hasErrors
+                ? `${validationErrors.length} ${
+                    validationErrors.length === 1 ? 'Issue' : 'Issues'
+                  }`
+                : 'Valid'}
+            </span>
           </button>
-          <button
-            type="button"
-            onClick={() => setMobileTab('diagram')}
-            className={`px-3 py-1 rounded text-xs font-medium ${
-              mobileTab === 'diagram'
-                ? 'bg-zinc-800 text-white font-semibold'
-                : 'text-zinc-400'
-            }`}
-          >
-            Diagram
-          </button>
-          <button
-            type="button"
-            onClick={() => setMobileTab('sql')}
-            className={`px-3 py-1 rounded text-xs font-medium ${
-              mobileTab === 'sql'
-                ? 'bg-zinc-800 text-white font-semibold'
-                : 'text-zinc-400'
-            }`}
-          >
-            SQL
-          </button>
-        </div>
 
-        {/* Right Nav Utilities */}
-        <div className="flex items-center gap-2.5 text-xs">
+          {/* AI Prompt Bar Toggle */}
+          <button
+            type="button"
+            onClick={() => setIsPromptOpen((prev) => !prev)}
+            className={`py-1.5 px-2.5 sm:px-3 rounded-lg border text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
+              isPromptOpen
+                ? 'bg-blue-950/50 border-blue-700/80 text-blue-200'
+                : 'bg-zinc-800/80 hover:bg-zinc-800 border-zinc-700/80 text-zinc-300 hover:text-white'
+            }`}
+          >
+            <svg className="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            <span className="hidden sm:inline">AI Prompt</span>
+          </button>
+
+          {/* Contextual Inspector Toggle */}
+          <button
+            type="button"
+            onClick={() => setIsInspectorOpen((prev) => !prev)}
+            className={`py-1.5 px-2.5 sm:px-3 rounded-lg border text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
+              isInspectorOpen
+                ? 'bg-zinc-800 border-zinc-600 text-white'
+                : 'bg-zinc-800/80 hover:bg-zinc-800 border-zinc-700/80 text-zinc-300 hover:text-white'
+            }`}
+          >
+            <svg className="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
+            <span className="hidden md:inline">Inspector</span>
+          </button>
+
+          {/* Save Schema */}
+          <button
+            type="button"
+            onClick={() => setIsSaveOpen(true)}
+            className="py-1.5 px-2.5 sm:px-3 rounded-lg bg-zinc-800/80 hover:bg-zinc-800 border border-zinc-700/80 text-zinc-200 hover:text-white font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <svg className="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+            </svg>
+            <span className="hidden sm:inline">Save</span>
+          </button>
+
+          {/* Three Dots Menu for Export (PostgreSQL, MySQL, JSON, SQL Drawer, etc.) */}
+          <ActionsMenu
+            onOpenSqlDrawer={() => setIsSqlDrawerOpen(true)}
+            onOpenPrompt={() => setIsPromptOpen(true)}
+            onShowToast={showToast}
+          />
+
+          <div className="h-4 w-px bg-zinc-800 mx-0.5 hidden sm:block" />
+
+          {/* My Schemas (for authenticated users) */}
           {user && (
             <Link
               href="/schemas"
-              className="py-1.5 px-3 rounded-md bg-zinc-800 hover:bg-zinc-750 border border-zinc-700/60 text-zinc-200 hover:text-white font-medium flex items-center gap-1.5 transition-colors text-xs"
+              className="py-1.5 px-2.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-800 border border-zinc-700/80 text-zinc-200 hover:text-white font-medium flex items-center gap-1.5 transition-colors text-xs hidden sm:flex"
             >
               <svg className="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
               </svg>
-              <span className="hidden sm:inline">My Schemas</span>
+              <span>My Schemas</span>
             </Link>
           )}
-
-          <button
-            type="button"
-            onClick={() => setIsSaveOpen(true)}
-            className="py-1.5 px-3 rounded-md bg-white text-zinc-950 hover:bg-zinc-200 font-semibold flex items-center gap-1.5 transition-colors text-xs cursor-pointer shadow-sm"
-          >
-            <svg className="w-3.5 h-3.5 text-zinc-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-            </svg>
-            <span>Save Schema</span>
-          </button>
-
-          <div className="h-4 w-px bg-zinc-800 mx-1 hidden sm:block" />
 
           <UserMenu />
         </div>
       </header>
 
-      <SaveDialog isOpen={isSaveOpen} onClose={() => setIsSaveOpen(false)} />
+      {/* Main Full-Width Visual Canvas Workspace */}
+      <main className="flex-1 relative overflow-hidden flex flex-col">
+        <DiagramCanvas
+          isInspectorOpen={isInspectorOpen}
+          onToggleInspector={() => setIsInspectorOpen((prev) => !prev)}
+          onOpenPrompt={() => setIsPromptOpen(true)}
+        />
 
-      {/* Main 3-Area Studio Layout */}
-      <main className="flex-1 flex overflow-hidden">
-        {/* Left Area: Describe Panel */}
-        <div
-          className={`w-full md:w-[380px] lg:w-[400px] shrink-0 ${
-            mobileTab === 'describe' ? 'flex flex-col' : 'hidden md:flex flex-col'
-          }`}
-        >
-          <DescribePanel />
-        </div>
+        {/* Floating AI Prompt Bar Docked at Bottom Center */}
+        <FloatingPromptBar
+          isOpen={isPromptOpen}
+          onClose={() => setIsPromptOpen(false)}
+          onShowToast={showToast}
+        />
 
-        {/* Center Area: Diagram Canvas */}
-        <div
-          className={`flex-1 relative ${
-            mobileTab === 'diagram' ? 'flex flex-col' : 'hidden md:flex flex-col'
-          }`}
-        >
-          <DiagramCanvas />
-        </div>
+        {/* Slide-over SQL Viewer Drawer */}
+        <SqlDrawer
+          isOpen={isSqlDrawerOpen}
+          onClose={() => setIsSqlDrawerOpen(false)}
+          onShowToast={showToast}
+        />
 
-        {/* Right Area: SQL Preview */}
-        <div
-          className={`w-full md:w-[360px] lg:w-[380px] shrink-0 ${
-            mobileTab === 'sql' ? 'flex flex-col' : 'hidden md:flex flex-col'
-          }`}
-        >
-          <SqlPreview />
-        </div>
+        {/* Save Schema Dialog */}
+        <SaveDialog
+          isOpen={isSaveOpen}
+          onClose={() => setIsSaveOpen(false)}
+        />
       </main>
     </div>
   );

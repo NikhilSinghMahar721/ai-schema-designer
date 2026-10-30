@@ -45,7 +45,7 @@ export function EditPanel() {
   // If nothing is selected, show schema overview & add table
   if (!selectedTable && !selectedRel) {
     return (
-      <div className="h-full flex flex-col bg-zinc-900 border-l border-zinc-800 text-xs">
+      <div className="h-full flex flex-col bg-zinc-900 text-xs">
         <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
           <span className="font-semibold text-zinc-200 uppercase tracking-wider text-[11px]">
             Inspector & Properties
@@ -126,7 +126,7 @@ export function EditPanel() {
     const toC = toT?.columns.find((c) => c.id === selectedRel.toColumn);
 
     return (
-      <div className="h-full flex flex-col bg-zinc-900 border-l border-zinc-800 text-xs">
+      <div className="h-full flex flex-col bg-zinc-900 text-xs">
         <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <svg className="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -206,7 +206,7 @@ export function EditPanel() {
 
   // Table / Column Inspector
   return (
-    <div className="h-full flex flex-col bg-zinc-900 border-l border-zinc-800 text-xs">
+    <div className="h-full flex flex-col bg-zinc-900 text-xs">
       {/* Top Header */}
       <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
         <div className="flex items-center gap-2">
