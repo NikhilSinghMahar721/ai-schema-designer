@@ -2,16 +2,18 @@
 
 /**
  * Main Designer Studio Page.
- * Full-screen interactive ER diagram workspace (Eraser / Figma style)
- * with unified top navbar, three-dots actions & export menu,
- * docked floating AI prompt bar, slide-over SQL drawer,
- * and contextual floating inspector.
+ * Full visual workspace with:
+ * 1. Unified top toolbar & navigation.
+ * 2. Left-side conversational AI Chat Panel with persistent message stream.
+ * 3. Expansive interactive ER Diagram canvas (blank or active tables).
+ * 4. Contextual overlay Inspector and slide-over SQL drawer.
+ * 5. Three-dots actions & export menu.
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { DiagramCanvas } from '../../features/designer/components/DiagramCanvas';
-import { FloatingPromptBar } from '../../features/designer/components/FloatingPromptBar';
+import { AiChatPanel } from '../../features/designer/components/AiChatPanel';
 import { SqlDrawer } from '../../features/designer/components/SqlDrawer';
 import { ActionsMenu } from '../../features/designer/components/ActionsMenu';
 import { UserMenu } from '../../features/auth/components/UserMenu';
@@ -21,9 +23,9 @@ import { useSchemaStore } from '../../features/designer/store/schema.store';
 import { useIsMounted } from '../../lib/useIsMounted';
 
 export default function DesignerPage() {
+  const [isChatOpen, setIsChatOpen] = useState(true);
   const [isSaveOpen, setIsSaveOpen] = useState(false);
   const [isSqlDrawerOpen, setIsSqlDrawerOpen] = useState(false);
-  const [isPromptOpen, setIsPromptOpen] = useState(false);
   const [isInspectorOpen, setIsInspectorOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -206,7 +208,7 @@ export default function DesignerPage() {
           </div>
         </div>
 
-        {/* Right Side: AI Prompt, Inspector, Save, Three Dots Menu & User Menu */}
+        {/* Right Side: AI Chat Toggle, Inspector, Save, Three Dots Menu & User Menu */}
         <div className="flex items-center gap-2 sm:gap-2.5 text-xs">
           {/* Validation Status */}
           <button
@@ -233,20 +235,21 @@ export default function DesignerPage() {
             </span>
           </button>
 
-          {/* AI Prompt Bar Toggle */}
+          {/* AI Chat Sidebar Toggle */}
           <button
             type="button"
-            onClick={() => setIsPromptOpen((prev) => !prev)}
+            onClick={() => setIsChatOpen((prev) => !prev)}
             className={`py-1.5 px-2.5 sm:px-3 rounded-lg border text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
-              isPromptOpen
+              isChatOpen
                 ? 'bg-blue-950/50 border-blue-700/80 text-blue-200'
                 : 'bg-zinc-800/80 hover:bg-zinc-800 border-zinc-700/80 text-zinc-300 hover:text-white'
             }`}
+            title="Toggle AI chat conversation"
           >
             <svg className="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
             </svg>
-            <span className="hidden sm:inline">AI Prompt</span>
+            <span className="hidden sm:inline">AI Chat</span>
           </button>
 
           {/* Contextual Inspector Toggle */}
@@ -280,7 +283,7 @@ export default function DesignerPage() {
           {/* Three Dots Menu for Export (PostgreSQL, MySQL, JSON, SQL Drawer, etc.) */}
           <ActionsMenu
             onOpenSqlDrawer={() => setIsSqlDrawerOpen(true)}
-            onOpenPrompt={() => setIsPromptOpen(true)}
+            onOpenPrompt={() => setIsChatOpen(true)}
             onShowToast={showToast}
           />
 
@@ -303,33 +306,39 @@ export default function DesignerPage() {
         </div>
       </header>
 
-      {/* Main Full-Width Visual Canvas Workspace */}
-      <main className="flex-1 relative overflow-hidden flex flex-col">
-        <DiagramCanvas
-          isInspectorOpen={isInspectorOpen}
-          onToggleInspector={() => setIsInspectorOpen((prev) => !prev)}
-          onOpenPrompt={() => setIsPromptOpen(true)}
-        />
+      {/* Main Studio Workspace */}
+      <main className="flex-1 flex overflow-hidden">
+        {/* Left Side: Conversational AI Chat Stream */}
+        {isChatOpen && (
+          <aside className="w-80 md:w-96 border-r border-zinc-800 bg-zinc-900 flex flex-col shrink-0 z-10 animate-in slide-in-from-left duration-150">
+            <AiChatPanel
+              onClose={() => setIsChatOpen(false)}
+              onShowToast={showToast}
+            />
+          </aside>
+        )}
 
-        {/* Floating AI Prompt Bar Docked at Bottom Center */}
-        <FloatingPromptBar
-          isOpen={isPromptOpen}
-          onClose={() => setIsPromptOpen(false)}
-          onShowToast={showToast}
-        />
+        {/* Right Side: Interactive ER Diagram Canvas */}
+        <section className="flex-1 relative overflow-hidden flex flex-col">
+          <DiagramCanvas
+            isInspectorOpen={isInspectorOpen}
+            onToggleInspector={() => setIsInspectorOpen((prev) => !prev)}
+            onOpenPrompt={() => setIsChatOpen(true)}
+          />
 
-        {/* Slide-over SQL Viewer Drawer */}
-        <SqlDrawer
-          isOpen={isSqlDrawerOpen}
-          onClose={() => setIsSqlDrawerOpen(false)}
-          onShowToast={showToast}
-        />
+          {/* Slide-over SQL Viewer Drawer */}
+          <SqlDrawer
+            isOpen={isSqlDrawerOpen}
+            onClose={() => setIsSqlDrawerOpen(false)}
+            onShowToast={showToast}
+          />
 
-        {/* Save Schema Dialog */}
-        <SaveDialog
-          isOpen={isSaveOpen}
-          onClose={() => setIsSaveOpen(false)}
-        />
+          {/* Save Schema Dialog */}
+          <SaveDialog
+            isOpen={isSaveOpen}
+            onClose={() => setIsSaveOpen(false)}
+          />
+        </section>
       </main>
     </div>
   );

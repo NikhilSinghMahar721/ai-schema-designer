@@ -219,6 +219,53 @@ export const SAMPLE_SCHEMA: Schema = {
   ],
 };
 
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: string;
+  tables?: string[];
+  relationshipsCount?: number;
+  isError?: boolean;
+}
+
+const CHAT_STORAGE_KEY = 'ai_schema_designer_chat_v1';
+
+export function getStoredChatMessages(): ChatMessage[] {
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem(CHAT_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch {
+      // Fallback on parse failure
+    }
+  }
+  return [
+    {
+      id: 'welcome_initial',
+      role: 'assistant',
+      content:
+        "Hello! I'm your AI Database Architect. Describe your application requirements, and I'll generate a complete relational database schema for you.",
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    },
+  ];
+}
+
+export function persistChatMessages(messages: ChatMessage[]) {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
+    } catch {
+      // ignore quota / storage errors
+    }
+  }
+}
+
 const MAX_HISTORY = 30;
 
 export interface SchemaStoreState {
@@ -230,6 +277,11 @@ export interface SchemaStoreState {
   errorStatus: number | null;
   generatedAt: Date | null;
   validationErrors: string[];
+
+  // Persistent conversation stream
+  chatMessages: ChatMessage[];
+  addChatMessage: (msg: Omit<ChatMessage, 'id' | 'timestamp'>) => void;
+  clearChatMessages: () => void;
 
   // Diagram layout positions & selections
   nodePositions: Record<string, { x: number; y: number }>;
@@ -319,6 +371,33 @@ export const useSchemaStore = create<SchemaStoreState>((set, get) => {
     generatedAt: new Date(),
     validationErrors: initialValidation,
 
+    chatMessages: getStoredChatMessages(),
+
+    addChatMessage: (msg: Omit<ChatMessage, 'id' | 'timestamp'>) => {
+      const newMsg: ChatMessage = {
+        ...msg,
+        id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      const updated = [...get().chatMessages, newMsg];
+      set({ chatMessages: updated });
+      persistChatMessages(updated);
+    },
+
+    clearChatMessages: () => {
+      const resetMessages: ChatMessage[] = [
+        {
+          id: `welcome_${Date.now()}`,
+          role: 'assistant',
+          content:
+            "Hello! I'm your AI Database Architect. Describe your application requirements, and I'll generate a complete relational database schema for you.",
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        },
+      ];
+      set({ chatMessages: resetMessages });
+      persistChatMessages(resetMessages);
+    },
+
     nodePositions: initialPositions,
     selectedTableId: null,
     selectedColumnId: null,
@@ -368,14 +447,41 @@ export const useSchemaStore = create<SchemaStoreState>((set, get) => {
     },
 
     generateFromDescription: async (description: string) => {
-      const { dialect } = get();
-      set({ isGenerating: true, error: null, errorStatus: null });
+      const { dialect, chatMessages } = get();
+
+      // Record user query in persistent chat stream
+      const userMsg: ChatMessage = {
+        id: `msg_${Date.now()}_u`,
+        role: 'user',
+        content: description,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      const withUserMsg = [...chatMessages, userMsg];
+      set({
+        chatMessages: withUserMsg,
+        isGenerating: true,
+        error: null,
+        errorStatus: null,
+      });
+      persistChatMessages(withUserMsg);
 
       try {
         const generatedSchema = await api.generateSchema(description, dialect);
         const newPositions = computeAutoLayout(generatedSchema);
         commitSchema(generatedSchema);
+
+        const tableNames = generatedSchema.tables.map((t) => t.name);
+        const assistantMsg: ChatMessage = {
+          id: `msg_${Date.now()}_a`,
+          role: 'assistant',
+          content: `Synthesized relational schema with ${generatedSchema.tables.length} tables and ${generatedSchema.relationships.length} foreign key relationships.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          tables: tableNames,
+          relationshipsCount: generatedSchema.relationships.length,
+        };
+        const finalMessages = [...get().chatMessages, assistantMsg];
         set({
+          chatMessages: finalMessages,
           isGenerating: false,
           error: null,
           errorStatus: null,
@@ -385,6 +491,7 @@ export const useSchemaStore = create<SchemaStoreState>((set, get) => {
           selectedColumnId: null,
           selectedRelationshipId: null,
         });
+        persistChatMessages(finalMessages);
         return true;
       } catch (err: unknown) {
         let message = 'Failed to generate schema';
@@ -395,14 +502,44 @@ export const useSchemaStore = create<SchemaStoreState>((set, get) => {
         } else if (err instanceof Error) {
           message = err.message;
         }
-        set({ error: message, errorStatus: statusCode, isGenerating: false });
+
+        const errorMsg: ChatMessage = {
+          id: `msg_${Date.now()}_err`,
+          role: 'assistant',
+          content: message,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          isError: true,
+        };
+        const finalMessages = [...get().chatMessages, errorMsg];
+        set({
+          chatMessages: finalMessages,
+          error: message,
+          errorStatus: statusCode,
+          isGenerating: false,
+        });
+        persistChatMessages(finalMessages);
         return false;
       }
     },
 
     refineFromInstruction: async (instruction: string) => {
-      const { schema } = get();
-      set({ isRefining: true, error: null, errorStatus: null });
+      const { schema, chatMessages } = get();
+
+      // Record refinement prompt in persistent chat stream
+      const userMsg: ChatMessage = {
+        id: `msg_${Date.now()}_u`,
+        role: 'user',
+        content: instruction,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      const withUserMsg = [...chatMessages, userMsg];
+      set({
+        chatMessages: withUserMsg,
+        isRefining: true,
+        error: null,
+        errorStatus: null,
+      });
+      persistChatMessages(withUserMsg);
 
       try {
         const refinedSchema = await api.refineSchema(schema, instruction);
@@ -421,13 +558,27 @@ export const useSchemaStore = create<SchemaStoreState>((set, get) => {
         }
 
         commitSchema(refinedSchema);
+
+        const tableNames = refinedSchema.tables.map((t) => t.name);
+        const assistantMsg: ChatMessage = {
+          id: `msg_${Date.now()}_a`,
+          role: 'assistant',
+          content: `Refined schema successfully based on your instruction. The schema now has ${refinedSchema.tables.length} tables and ${refinedSchema.relationships.length} relationships.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          tables: tableNames,
+          relationshipsCount: refinedSchema.relationships.length,
+        };
+        const finalMessages = [...get().chatMessages, assistantMsg];
+
         set({
+          chatMessages: finalMessages,
           isRefining: false,
           error: null,
           errorStatus: null,
           nodePositions: currentPositions,
           generatedAt: new Date(),
         });
+        persistChatMessages(finalMessages);
 
         return { success: true, diff };
       } catch (err: unknown) {
@@ -439,7 +590,24 @@ export const useSchemaStore = create<SchemaStoreState>((set, get) => {
         } else if (err instanceof Error) {
           message = err.message;
         }
-        set({ error: message, errorStatus: statusCode, isRefining: false });
+
+        const errorMsg: ChatMessage = {
+          id: `msg_${Date.now()}_err`,
+          role: 'assistant',
+          content: message,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          isError: true,
+        };
+        const finalMessages = [...get().chatMessages, errorMsg];
+
+        set({
+          chatMessages: finalMessages,
+          error: message,
+          errorStatus: statusCode,
+          isRefining: false,
+        });
+        persistChatMessages(finalMessages);
+
         return { success: false, error: message };
       }
     },
